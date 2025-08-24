@@ -1,6 +1,7 @@
 const API = import.meta.env.VITE_API || 'http://localhost:8000'
 let token: string | null = null
 export function setToken(t:string){ token=t }
+export function clearToken(){ token=null }
 function auth(){ return token ? { 'Authorization':'Bearer '+token } : {} }
 
 export async function register(email:string,password:string){

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { register, login, renderView, editCell, addItem, delItem, setRecurrence, setSettings, applyDates } from './api'
+import { register, login, renderView, editCell, addItem, delItem, setRecurrence, setSettings, applyDates, clearToken } from './api'
+import './styles.css'
 
 type Gran = 'WEEK'|'MONTH'|'QUARTER'|'YEAR'
 type Settings = { gran: Gran, collapse: boolean, alert: number, dates?: {start?:string, end?:string} }
@@ -11,7 +12,8 @@ export default function App(){
 
   const [html, setHtml] = useState('')
   const [settings, setStateSettings] = useState<Settings>({gran:'MONTH', collapse:false, alert:0})
-  const [activeTab, setActiveTab] = useState<'dates'|'view'|'horizon'|'items'|'alerts'|'more'>('dates')
+  const [activeTab, setActiveTab] = useState<'dates'|'view'|'items'|'alerts'|'more'>('dates')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   async function load(){
     const { html, settings } = await renderView()
@@ -41,7 +43,6 @@ export default function App(){
     )
   }
 
-  // Handlers bound to server-rendered grid
   async function onGridClick(e: React.MouseEvent<HTMLDivElement>){
     const t = e.target as HTMLElement
     if(t.tagName === 'INPUT' && t.classList.contains('cell')){
@@ -68,20 +69,23 @@ export default function App(){
     }
   }
 
-  // Because the backend renders the same HTML/classes as your reference file,
-  // we keep a toolbar that mirrors its structure and looks identical via CSS.
   return (
     <div>
       <header>
         <div className="bar">
-          <button className="hamburger" id="menuBtn" title="Menu" onClick={()=>alert('Personal area (placeholder)')}>☰</button>
+          <button className="hamburger" id="menuBtn" title="Menu" onClick={()=>setMenuOpen(v=>!v)}>☰</button>
           <h1>Cash‑Flow Forecaster</h1>
           <div className="spacer"></div>
+          {menuOpen && (
+            <div style={{position:'absolute', right:16, top:48, background:'#fff', border:'1px solid #E6E7EB', borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,0.08)', padding:8, zIndex:1000}}>
+              <button className="ghost" onClick={()=>{ clearToken(); setAuthed(false); setMenuOpen(false); }}>Log out</button>
+            </div>
+          )}
         </div>
 
         <div className="toolbar">
           <div role="tablist" className="tablist" id="tablist">
-            {(['dates','view','horizon','items','alerts','more'] as const).map(tab=>(
+            {(['dates','view','items','alerts','more'] as const).map(tab=>(
               <button key={tab} className="tab" role="tab"
                 aria-selected={activeTab===tab} data-tab={tab}
                 onClick={()=>setActiveTab(tab)}>
@@ -120,11 +124,6 @@ export default function App(){
               <button className="ghost" onClick={async()=>{ await saveSettings({ collapse: false }) }}>Expand all</button>
             </div>
 
-            {/* Horizon */}
-            <div className={`tabpane ${activeTab==='horizon'?'show':''}`} id="pane-horizon">
-              <span style={{opacity:.7}}>Use Dates to set a custom horizon (weekly growth coming in next pass).</span>
-            </div>
-
             {/* Items */}
             <div className={`tabpane ${activeTab==='items'?'show':''}`} id="pane-items">
               <button className="ghost" onClick={async()=>{
@@ -160,24 +159,26 @@ export default function App(){
         </div>
       </header>
 
-      {/* The server renders the cards+table markup using the **same classes** as your HTML. */}
-      <div className="wrap" onBlurCapture={async (e) => {
-  const t = e.target as HTMLElement;
-  if (t.tagName === 'INPUT' && t.classList.contains('cell')) {
-    const inp = t as HTMLInputElement;
-    const rowId = inp.getAttribute('data-row');
-    const weekId = inp.getAttribute('data-wid');
-    if (rowId && weekId) {
-      const value = parseFloat(inp.value || '0');
-      try {
-        await editCell('positives', rowId, weekId, value);
-      } catch {
-        await editCell('negatives', rowId, weekId, value);
-      }
-      await load();
-    }
-  }
-}} onClick={onGridClick} dangerouslySetInnerHTML={{__html: html}} />
+      {/* Server renders cards+table with exact classes as reference HTML */}
+      <div
+        className="wrap"
+        onBlurCapture={async (e) => {
+          const t = e.target as HTMLElement;
+          if (t.tagName === 'INPUT' && t.classList.contains('cell')) {
+            const inp = t as HTMLInputElement;
+            const rowId = inp.getAttribute('data-row');
+            const weekId = inp.getAttribute('data-wid');
+            if (rowId && weekId) {
+              const value = parseFloat(inp.value || '0');
+              try { await editCell('positives', rowId, weekId, value); }
+              catch { await editCell('negatives', rowId, weekId, value); }
+              await load();
+            }
+          }
+        }}
+        onClick={onGridClick}
+        dangerouslySetInnerHTML={{__html: html}}
+      />
     </div>
   )
 }

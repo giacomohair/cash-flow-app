@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Literal
 from datetime import datetime, timedelta, date
 
-# helpers
+# -------- helpers --------
 def uid(i:int)->str: return f"id{i:06d}"
 def start_of_week(d:date)->date: return d - timedelta(days=d.weekday())
 def end_of_week(d:date)->date: return start_of_week(d)+timedelta(days=6)
@@ -39,6 +39,7 @@ def demo(with_dates:Dict[str,str]|None=None)->Dict[str,Any]:
     ]
     return {"bop0":1500,"weeks":weeks,"positives":positives,"negatives":negatives}
 
+# -------- recurrence/materialization --------
 def is_monthly_hit(week_start_iso:str, anchor_iso:str)->bool:
     w = datetime.fromisoformat(week_start_iso).date()
     anchor = datetime.fromisoformat(anchor_iso).date()
@@ -56,6 +57,7 @@ def materialize(model:Dict[str,Any])->None:
         amt = float(r.get("amount",0))
         for i,w in enumerate(model["weeks"]):
             wid = w["id"]
+            # if already has a manual value, keep it
             if float(row["values"].get(wid,0)) != 0:
                 continue
             k = r.get("kind")
@@ -66,11 +68,12 @@ def materialize(model:Dict[str,Any])->None:
             elif k=="MONTHLY":
                 row["values"][wid]=amt if is_monthly_hit(w["start"], anchor) else 0
             elif k=="CUSTOM":
-                n=int(r.get("every",1))
+                n = int(r.get("every",1))
                 row["values"][wid]=amt if (i % n)==0 else 0
     for r in model["positives"]: apply(r)
     for r in model["negatives"]: apply(r)
 
+# -------- totals --------
 def totals_by_week(model:Dict[str,Any])->Dict[str,Dict[str,float]]:
     totals={}
     for i,w in enumerate(model["weeks"]):
@@ -83,6 +86,7 @@ def totals_by_week(model:Dict[str,Any])->Dict[str,Dict[str,float]]:
         totals[wid]={"pos":pos,"neg":neg,"net":net,"bop":bop,"eop":eop}
     return totals
 
+# -------- aggregation helpers --------
 def month_key(d_iso:str)->str:
     d = datetime.fromisoformat(d_iso).date()
     return f"{d.year}-{d.month:02d}"
@@ -115,14 +119,16 @@ def fmt_eur(n:float)->str:
     s=f"€{n:,.0f}".replace(",","_")
     return s.replace(".",",").replace("_",".")
 
+# -------- render --------
 def render_html(model:Dict[str,Any], settings:Dict[str,Any])->str:
-    gran = settings.get("gran","MONTH")
+    gran = settings.get("gran","MONTH")  # WEEK/MONTH/QUARTER/YEAR
     eop_threshold = float(settings.get("alert",0))
     collapse = bool(settings.get("collapse", False))
 
     totals = totals_by_week(model)
     periods = build_periods(model, gran)
 
+    # cards
     last_eop = totals[model["weeks"][-1]["id"]]["eop"] if model["weeks"] else 0.0
     hits=[]
     for w in model["weeks"]:
@@ -136,13 +142,16 @@ def render_html(model:Dict[str,Any], settings:Dict[str,Any])->str:
       <div class="card"><h3>View</h3><div class="big">{gran.title()}</div><div class="sub">{'Collapsed' if collapse else 'Expanded'}</div></div>
     </div>'''
 
+    # table header
     thead=['<thead>']
     thead.append('<tr class="periods">')
     thead.append('<th class="sticky">Item / Period</th>')
     for p in periods:
         symbol = "-" if not collapse else "+"
-        thead.append(f'<th colspan="{len(p["weeks"])}"><button class="collapse-toggle" data-pid="{p["id"]}">{symbol}</button> {p["label"]}</th>')
+        colspan = len(p["weeks"]) if (not collapse or gran=="WEEK") else 1
+        thead.append(f'<th colspan="{colspan}"><button class="collapse-toggle" data-pid="{p["id"]}">{symbol}</button> {p["label"]}</th>')
     thead.append('</tr>')
+    # weeks header
     thead.append('<tr class="weeks">'); thead.append('<th class="sticky"></th>')
     if not collapse or gran=="WEEK":
         for p in periods:
@@ -150,28 +159,40 @@ def render_html(model:Dict[str,Any], settings:Dict[str,Any])->str:
                 w = next(w for w in model["weeks"] if w["id"]==wid)
                 d = datetime.fromisoformat(w["start"]).date().strftime("%b %d")
                 thead.append(f"<th>{d}</th>")
+    else:
+        # placeholder to align with one column per period
+        for _ in periods:
+            thead.append("<th></th>")
     thead.append('</tr>'); thead.append('</thead>')
 
+    # utility
     def row_cells(row:Dict[str,Any])->str:
         cells=[]
         if not collapse or gran=="WEEK":
             for p in periods:
                 for wid in p["weeks"]:
                     v = float(row["values"].get(wid,0))
+                    # Savings editable only in WEEK view
                     dis_attr = "" if (gran=="WEEK") else (" disabled" if row["name"].lower()=="savings" else "")
+                    # Adjustment always editable
+                    if row.get("isAdjustment") and dis_attr:
+                        dis_attr = ""
                     cells.append(f'<td><input class="cell" type="number" value="{v}" data-row="{row["id"]}" data-wid="{wid}"{dis_attr} onfocus="this.select()"></td>')
         else:
+            # collapsed: show sums, read-only
             for p in periods:
                 s = sum(float(row["values"].get(wid,0)) for wid in p["weeks"])
                 cells.append(f'<td class="agg">Σ {fmt_eur(s)}</td>')
         return "".join(cells)
 
     tbody=['<tbody>']
+    # Inflows
     tbody.append(f'<tr class="section inflows"><td class="sticky">Inflows</td>{"".join("<td></td>" for _ in range(sum(len(p["weeks"]) for p in periods) if not collapse or gran=="WEEK" else len(periods)))}</tr>')
     for r in model["positives"]:
         tbody.append('<tr class="row inflow-row">')
         tbody.append(f'<td class="sticky"><div class="rowname"><span class="name">{r["name"]}</span> <button class="recurrence" data-section="positives" data-row="{r["id"]}">📅</button> <button class="delete" data-section="positives" data-row="{r["id"]}">🗑</button></div></td>')
         tbody.append(row_cells(r)); tbody.append('</tr>')
+    # Outflows
     tbody.append(f'<tr class="section outflows"><td class="sticky">Outflows</td>{"".join("<td></td>" for _ in range(sum(len(p["weeks"]) for p in periods) if not collapse or gran=="WEEK" else len(periods)))}</tr>')
     for r in model["negatives"]:
         css = "adjustment-row" if r.get("isAdjustment") else "outflow-row"
@@ -180,6 +201,7 @@ def render_html(model:Dict[str,Any], settings:Dict[str,Any])->str:
         tbody.append(f'<td class="sticky"><div class="rowname"><span class="name">{r["name"]}</span> {tag_html} <button class="recurrence" data-section="negatives" data-row="{r["id"]}">📅</button> <button class="delete" data-section="negatives" data-row="{r["id"]}">🗑</button></div></td>')
         tbody.append(row_cells(r)); tbody.append('</tr>')
 
+    # Balances
     def add_balance_row(label, key, danger=False):
         tbody.append(f'<tr><td class="sticky">{label}</td>')
         if not collapse or gran=="WEEK":
@@ -208,5 +230,6 @@ def render_html(model:Dict[str,Any], settings:Dict[str,Any])->str:
     add_balance_row("EoP","eop", danger=True)
 
     tbody.append('</tbody>')
+
     table = '<div class="panel"><table id="grid">' + "".join(thead) + "".join(tbody) + '</table></div>'
     return cards + table

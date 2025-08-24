@@ -10,6 +10,7 @@ from .auth import hash_password, verify_password, create_access_token, get_curre
 from .services import demo, materialize, render_html, weeks_from_dates
 
 Base.metadata.create_all(bind=engine)
+
 app = FastAPI(title="Cash‑Flow Forecaster API")
 
 origins = os.getenv("CORS_ORIGINS","http://localhost:5173").split(",")
@@ -21,6 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# auth
 @app.post("/api/auth/register")
 def register(body: dict, db: Session = Depends(get_db)):
     email = (body.get("email","") or "").strip().lower()
@@ -67,7 +69,7 @@ def render_view(user_id:int=Depends(get_current_user_id), db:Session=Depends(get
 
 from pydantic import BaseModel
 class CellEdit(BaseModel):
-    section: str
+    section: str  # positives|negatives
     row_id: str
     week_id: str
     value: float
@@ -81,7 +83,9 @@ def edit_cell(edit:CellEdit, user_id:int=Depends(get_current_user_id), db:Sessio
     row = next((r for r in group if r["id"]==edit.row_id), None)
     if not row: raise HTTPException(404,"Row not found")
     v = float(edit.value)
-    if row["type"]=="OUTFLOW" and v>0: v = -v
+    # keep outflows negative EXCEPT for Adjustment rows which allow both signs
+    if row["type"]=="OUTFLOW" and not row.get("isAdjustment") and v>0:
+        v = -v
     row["values"][edit.week_id]=v
     materialize(data)
     fm.data=json.dumps(data); db.commit()
@@ -90,25 +94,40 @@ def edit_cell(edit:CellEdit, user_id:int=Depends(get_current_user_id), db:Sessio
 class AddItem(BaseModel):
     section: str
     name: str
-    type: str
+    type: str  # INFLOW|OUTFLOW
     amount: float = 0.0
     recur_kind: str | None = None
     every: int | None = 1
 
 @app.post("/api/items/add")
-def add_item(body:AddItem, user_id:int=Depends(get_current_user_id), db:Session=Depends(get_db)):
+def add_item(body: AddItem, user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
     fm = get_or_create_model(db, user_id)
     data = json.loads(fm.data)
-    if body.section not in ("positives","negatives"): raise HTTPException(400,"Invalid section")
+    if body.section not in ("positives", "negatives"):
+        raise HTTPException(400, "Invalid section")
     weeks = data["weeks"]
-    values = {w["id"]:0 for w in weeks}
-    item = {"id":f"row{len(data[body.section])+1}","name":body.name,"type":body.type,"values":values}
+    values = {w["id"]: 0 for w in weeks}
+
+    item = {
+        "id": f"row{len(data[body.section]) + 1}",
+        "name": body.name,
+        "type": body.type,
+        "values": values,
+    }
+
     if body.recur_kind:
-        item["recur"]={"kind":body.recur_kind,"every":body.every or 1,"amount": body.amount if body.type=="INFLOW" else -abs(body.amount)}
+        amt = body.amount if body.type == "INFLOW" else -abs(body.amount)
+        item["recur"] = {
+            "kind": body.recur_kind,
+            "every": body.every or 1,
+            "amount": amt,
+        }
+
     data[body.section].append(item)
     materialize(data)
-    fm.data=json.dumps(data); db.commit()
-    return {"ok":True}
+    fm.data = json.dumps(data)
+    db.commit()
+    return {"ok": True}
 
 class DelItem(BaseModel):
     section: str
@@ -137,7 +156,9 @@ def set_recurrence(body:SetRecur, user_id:int=Depends(get_current_user_id), db:S
     if not row: raise HTTPException(404,"Row not found")
     amt = body.amount if row["type"]=="INFLOW" else -abs(body.amount)
     row["recur"]={"kind":body.recur_kind,"every":body.every or 1,"amount":amt}
-    for wid in row["values"].keys(): row["values"][wid]=0
+    # clear existing values so recurrence fully rematerializes
+    for wid in row["values"].keys():
+        row["values"][wid]=0
     materialize(data)
     fm.data=json.dumps(data); db.commit(); return {"ok":True}
 
@@ -149,7 +170,8 @@ def apply_dates(body:ApplyDates, user_id:int=Depends(get_current_user_id), db:Se
     fm = get_or_create_model(db, user_id)
     data = json.loads(fm.data)
     new_weeks = weeks_from_dates(body.start, body.end)
-    def remap(r): r["values"]={w["id"]:0 for w in new_weeks}; return r
+    def remap(r):
+        r["values"]={w["id"]:0 for w in new_weeks}; return r
     data["weeks"]=new_weeks
     data["positives"]=[remap(r) for r in data["positives"]]
     data["negatives"]=[remap(r) for r in data["negatives"]]
