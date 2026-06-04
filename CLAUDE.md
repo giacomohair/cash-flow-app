@@ -61,13 +61,19 @@ NON normalizzare in tabelle per-riga/per-cella se non te lo chiedo esplicitament
 - Mai committare segreti. URL/anon key Supabase via env/config; la service-role key MAI nel frontend.
 - Con dati finanziari reali, la RLS è obbligatoria prima di qualsiasi deploy.
 
-## Domanda aperta da risolvere in Fase 0
-Il workflow reale del proprietario inserisce ogni settimana un valore EFFETTIVO di
-cassa a fine settimana ("Cassa a fine periodo"), ma in questo model l'EOP è calcolato
-(bop+net) e la riconciliazione avviene tramite la riga Adjustment. Conferma col
-proprietario se: (a) mantenere EOP calcolato + Adjustment manuale (design attuale),
-oppure (b) consentire l'inserimento diretto di un EOP effettivo per settimana.
-Non cambiare questo senza conferma.
+## Domanda aperta — RISOLTA in Fase 0 (proprietario, 2026-06-04)
+Decisione: opzione (b) — consentire l'inserimento diretto di un EOP EFFETTIVO per
+settimana. La riga EoP della tabella diventa editabile.
+
+VINCOLO sull'implementazione (parsimonia): NON aggiungere campi al data model e NON
+memorizzare l'EOP. Quando l'utente digita un EoP effettivo per la settimana i, si
+calcola a ritroso il valore della riga Adjustment esistente:
+  Adjustment.values[i] = EoP_target − bop(i) − (net della settimana i ESCLUSO Adjustment)
+dove bop(i) = eop(i-1) (la catena di `totalsByWeek` resta identica). Quindi EOP rimane
+CALCOLATO (bop+net) e l'Adjustment continua a portare il dato verbatim: il model è
+preservato esattamente, cambia solo la UI (cella EoP editabile → back-solve su Adjustment)
+e si ricalcola a valle. Implementazione prevista come step dedicato DOPO il refactor
+Fase 1 (il refactor puro deve restare verificabile a comportamento identico).
 
 ## Glossario (IT ↔ codice)
 Stipendio=Salary · Bonus annuale=Bonus · Mutuo=Mortgage · Asilo=Kindergarten ·
