@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Cash-Flow Forecaster — v6e (tabbed toolbar)</title>
+<title>Cash‑Flow Forecaster — v6e (tabbed toolbar)</title>
 <style>
 :root {
   --accent:#FF385C; --accent-700:#E03152;
@@ -104,7 +104,7 @@ th .toggle{cursor:pointer;color:#2563eb}
 <header>
   <div class="bar">
     <button class="hamburger" id="menuBtn" title="Menu">☰</button>
-    <h1>Cash-Flow Forecaster</h1>
+    <h1>Cash‑Flow Forecaster</h1>
     <div class="spacer"></div>
   </div>
 
@@ -203,13 +203,13 @@ th .toggle{cursor:pointer;color:#2563eb}
   <div class="panel">
     <table id="grid"></table>
   </div>
-  <p style="opacity:.7;font-size:12px">Tip: Click a period header (▼/▶) to expand/compact. Aggregated cells are read-only; expand to edit week values.</p>
+  <p style="opacity:.7;font-size:12px">Tip: Click a period header (▼/▶) to expand/compact. Aggregated cells are read‑only; expand to edit week values.</p>
 </div>
 
 <!-- Mobile quick actions -->
 <div class="mobilebar">
   <button class="btn" id="mViewBtn">View: <span id="mViewLabel">Months</span></button>
-  <button class="btn" id="mCollapseBtn">…</button>
+  <button class="btn" id="mCollapseBtn">▦</button>
   <button class="btn" id="mAddWeekBtn">+W</button>
   <button class="btn" id="mPlus3Btn">+3m</button>
   <button class="btn" id="mResetBtn">Reset</button>
@@ -453,7 +453,7 @@ function render(){
   html += `<tr class="section inflows"><td class="sticky">Inflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
   for(const r of model.positives){
     html += `<tr class="inflow-row">`;
-    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> <button class="iconbtn" title="Recurrence" onclick="editRecurrence('positives','${r.id}')">🔁</button> <button class="iconbtn" title="Delete" onclick="deleteRow('positives','${r.id}')">🗑️</button></div></td>`;
+    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> <button class="iconbtn" title="Recurrence" onclick="editRecurrence('positives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('positives','${r.id}')">🗑️</button></div></td>`;
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
@@ -475,7 +475,7 @@ function render(){
     const tags = [];
     if(r.locked) tags.push('Locked');
     if(r.isAdjustment) tags.push('Adjustment');
-    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tags.map(t=>`<span class="tag">${t}</span>`).join(' ')} ${(!r.isAdjustment && !r.locked) ? `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">🔁</button> <button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`:''}</div></td>`;
+    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tags.map(t=>`<span class="tag">${t}</span>`).join(' ')} ${(!r.isAdjustment && !r.locked) ? `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`:''}</div></td>`;
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);

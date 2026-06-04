@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Fase 1: prototipo cash-flow statico \\(index.html\\) per deploy Vercel *)",
+      "Bash(git push *)",
+      "Bash(gh auth *)",
+      "Bash(command -v python3)",
+      "Bash(echo \"python3: $\\(command -v python3 || echo NO\\)\")",
+      "Bash(command -v npx)",
+      "Bash(echo \"npx: $\\(command -v npx || echo NO\\)\")",
+      "Bash(ip addr *)",
+      "Bash(python3 -m http.server 8011 --directory /root/cash-flow-app)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8011/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8011/index.html)",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"http.server\")",
+      "Bash(python3 -m http.server 8000 --directory /root/cash-flow-app)",
+      "Bash(curl -s -o /dev/null -w \"root /  -> HTTP %{http_code}\\\\n\" http://localhost:8000/)",
+      "Read(//home/**)",
+      "Read(//etc/**)"
+    ]
+  }
+}
