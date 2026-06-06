@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cash‑Flow Forecaster — v6e (tabbed toolbar)</title>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <button class="hamburger" id="menuBtn" title="Menu">☰</button>
+    <h1>Cash‑Flow Forecaster</h1>
+    <div class="spacer"></div>
+  </div>
+
+  <!-- Tabbed toolbar -->
+  <div class="toolbar">
+    <div role="tablist" class="tablist" id="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="dates">Dates</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="view">View</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="horizon">Horizon</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="items">Items</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="alerts">Alerts</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="more">More</button>
+    </div>
+    <div class="tabpanes">
+      <!-- Dates -->
+      <div class="tabpane show" id="pane-dates">
+        <label title="Start date (snaps to Monday)">Start&nbsp;<input id="startDate" type="date"></label>
+        <label title="End date (snaps to Sunday)">End&nbsp;<input id="endDate" type="date"></label>
+        <button class="ghost" id="applyDatesBtn">Apply dates</button>
+        <button class="ghost" id="init6mBtn">Init 6m</button>
+      </div>
+      <!-- View / Grouping -->
+      <div class="tabpane" id="pane-view">
+        <label>View
+          <select id="granSel">
+            <option value="WEEK">Weeks</option>
+            <option value="MONTH" selected>Months</option>
+            <option value="QUARTER">Quarters</option>
+            <option value="YEAR">Years</option>
+          </select>
+        </label>
+        <button class="ghost" id="collapseAllBtn">Collapse all</button>
+        <button class="ghost" id="expandAllBtn">Expand all</button>
+      </div>
+      <!-- Horizon growth -->
+      <div class="tabpane" id="pane-horizon">
+        <button class="ghost" id="addWeekBtn">+ Week</button>
+        <button class="ghost" id="plus3mBtn">+ 3 months</button>
+        <button class="ghost" id="plus6mBtn">+ 6 months</button>
+      </div>
+      <!-- Items -->
+      <div class="tabpane" id="pane-items">
+        <button class="ghost" id="addInflowBtn">+ Inflow</button>
+        <button class="ghost" id="addOutflowBtn">+ Outflow</button>
+      </div>
+      <!-- Alerts -->
+      <div class="tabpane" id="pane-alerts">
+        <label title="Cells turn red when EoP is below this amount">
+          EoP Alert&nbsp;<input id="eopThreshold" type="number" value="0" step="100" />
+        </label>
+      </div>
+      <!-- More -->
+      <div class="tabpane" id="pane-more">
+        <button class="ghost" id="resetBtn">Reset → Demo</button>
+        <span style="opacity:.6">More settings coming soon…</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Drawer -->
+<div class="drawer" id="drawer">
+  <div class="overlay" id="closeDrawer"></div>
+  <div class="panel">
+    <h2>Menu</h2>
+    <a href="#" onclick="openPersonalArea();return false;">👤 Personal Area</a>
+    <a href="#" onclick="alert('Settings coming soon');return false;">⚙️ Settings</a>
+    <a href="#" onclick="alert('Help coming soon');return false;">❓ Help</a>
+    <hr style="margin:12px 0;border:none;border-top:1px solid var(--line)"/>
+    <p style="font-size:12px;opacity:.7">Placeholder menu for future features.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="cards">
+    <div class="card">
+      <h3>Final EoP</h3>
+      <div class="big" id="cardEop">—</div>
+      <div class="sub">Cash at the end of the horizon</div>
+    </div>
+    <div class="card">
+      <h3>Running Savings (last)</h3>
+      <div class="big" id="cardRunSav">—</div>
+      <div class="sub">Cumulative savings up to the last week</div>
+    </div>
+    <div class="card">
+      <h3>Alerts (EoP &lt; threshold)</h3>
+      <div class="big bad" id="cardAlertCount">—</div>
+      <div class="chips" id="cardAlertChips"></div>
+      <div class="sub">Weeks where EoP falls below your alert</div>
+    </div>
+  </div>
+
+  <div id="msg" style="display:none;margin:8px 0;padding:8px 10px;border:1px solid #fde68a;background:#fffbeb;color:#7c2d12;border-radius:8px"></div>
+
+  <div class="panel">
+    <table id="grid"></table>
+  </div>
+  <p style="opacity:.7;font-size:12px">Tip: Click a period header (▼/▶) to expand/compact. Aggregated cells are read‑only; expand to edit week values.</p>
+</div>
+
+<!-- Mobile quick actions -->
+<div class="mobilebar">
+  <button class="btn" id="mViewBtn">View: <span id="mViewLabel">Months</span></button>
+  <button class="btn" id="mCollapseBtn">▦</button>
+  <button class="btn" id="mAddWeekBtn">+W</button>
+  <button class="btn" id="mPlus3Btn">+3m</button>
+  <button class="btn" id="mResetBtn">Reset</button>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
