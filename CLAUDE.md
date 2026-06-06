@@ -101,7 +101,7 @@ i test.
 5. **OTP / login con codice via email** (rinviato in Fase 2.5): richiede lo stesso SMTP.
 6. **Opzionali**: dominio personalizzato; registrazione ristretta (uso familiare);
    rimuovere/spostare il prototipo `cashflow-forecaster-v6e.html` in `docs/`.
-7. **Avvisi hamburger menu → modali in-app**: sostituire gli `alert()` nativi del
-   browser ("Settings coming soon", "Help coming soon") con modali in-app coerenti.
-   Aggiungere anche un avviso per **Personal Area** (oggi al click non mostra nulla;
-   `openPersonalArea()` usa un alert ma sembra non comparire — da verificare e rendere modale).
+
+## Fatto di recente (oltre le Fasi 1-4)
+- Avvisi hamburger menu (Personal Area / Settings / Help) → modali in-app (`infoModal`).
+- Etichette esplicite in tabella/card: "BoP (Beginning of Period)", "EoP (End of Period)".
