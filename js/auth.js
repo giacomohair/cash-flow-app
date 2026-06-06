@@ -65,8 +65,9 @@ signupBtn.addEventListener('click', async ()=>{
 if(logoutBtn){
   logoutBtn.addEventListener('click', async (e)=>{
     e.preventDefault();
+    await storage.flushNow();           // invia eventuali salvataggi in coda
     await sb.auth.signOut();
-    document.getElementById('drawer')?.classList.remove('show');
+    location.reload();                  // stato pulito: il prossimo utente ricarica dal cloud
   });
 }
 
