@@ -21,8 +21,26 @@ h1{margin:0;font-size:18px;letter-spacing:.2px}
 .tab{border:1px solid var(--line);background:#fff;padding:6px 10px;border-radius:999px;cursor:pointer}
 .tab[aria-selected="true"]{background:linear-gradient(180deg,var(--accent),var(--accent-700));color:#fff;border-color:transparent}
 .tabpanes{background:var(--panel);border-bottom:1px solid var(--line)}
-.tabpane{display:none;padding:10px 16px}
-.tabpane.show{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.controls{display:none;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 16px}
+.controls .sep{flex-basis:100%;height:0;margin:0}
+/* Date range: visibile in Dashboard e Full view */
+body.view-dashboard #dateBar,
+body.view-full #dateBar{display:flex}
+/* KPI solo in Dashboard; tabella e pannello Settings solo in Full view */
+body:not(.view-dashboard) .cards{display:none}
+body.view-dashboard #gridPanel,
+body.view-dashboard #gridTip,
+body.view-dashboard #settingsPanel{display:none}
+
+/* Pannello Settings (sotto-sezione di Full cash-flow view) */
+.settings-panel{border:1px solid var(--line);border-radius:12px;background:var(--muted);margin-bottom:12px;overflow:hidden}
+.settings-panel > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:10px 16px;user-select:none}
+.settings-panel > summary::-webkit-details-marker{display:none}
+.settings-panel > summary::after{content:'▾';margin-left:auto;opacity:.6;transition:transform .15s}
+.settings-panel[open] > summary::after{transform:rotate(180deg)}
+.settings-title{font-weight:700}
+.settings-caption{font-size:12px;opacity:.65}
+.settings-panel #settingsControls{display:flex;background:var(--panel);border-top:1px solid var(--line)}
 select,button,input[type="number"],input[type="date"]{
   border:1px solid var(--line);background:#fff;padding:8px 10px;border-radius:999px;cursor:pointer;color:inherit
 }

@@ -35,8 +35,8 @@ function clearMessages(){ authError.style.display='none'; authMsg.style.display=
 
 // --- Modalità della schermata (login / register) ---
 const SUBTITLES = {
-  login:    'Accedi per continuare',
-  register: 'Crea il tuo account'
+  login:    'Sign in to continue',
+  register: 'Create your account'
 };
 function setMode(mode){
   clearMessages();
@@ -57,9 +57,9 @@ function exitToAuth(){
 
 // --- Validazione password ---
 function passwordProblem(pw, pw2){
-  if(pw.length < 8) return 'La password deve avere almeno 8 caratteri.';
-  if(!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return 'La password deve contenere sia lettere sia numeri.';
-  if(pw !== pw2) return 'Le due password non coincidono.';
+  if(pw.length < 8) return 'Password must be at least 8 characters.';
+  if(!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return 'Password must contain both letters and numbers.';
+  if(pw !== pw2) return 'The two passwords do not match.';
   return null;
 }
 
@@ -94,7 +94,7 @@ registerForm.addEventListener('submit', async (e)=>{
     // "Confirm email" disabilitato: utente già loggato → onAuthStateChange entra
   } else {
     setMode('login');
-    showMsg('Registrazione effettuata. Controlla la tua email per confermare, poi accedi.');
+    showMsg('Account created. Check your email to confirm, then sign in.');
   }
 });
 

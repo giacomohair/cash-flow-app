@@ -356,16 +356,19 @@ function addWeek(){
   materialize(model); save(model); render();
 }
 
-// Bind toolbar
+// Bind view navigation (Dashboard / Full cash-flow view / Settings)
+const VIEWS = ['dashboard','full'];
+function setView(view){
+  if(!VIEWS.includes(view)) view = 'dashboard';
+  for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
+  for(const v of VIEWS) document.body.classList.toggle('view-'+v, v===view);
+}
 document.getElementById('tablist').addEventListener('click', (e)=>{
   if(!(e.target instanceof HTMLElement)) return;
   const b = e.target.closest('.tab'); if(!b) return;
-  const id = b.getAttribute('data-tab'); if(!id) return;
-  for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', 'false');
-  b.setAttribute('aria-selected','true');
-  for(const p of document.querySelectorAll('.tabpane')) p.classList.remove('show');
-  const pane = document.getElementById('pane-' + id); if(pane) pane.classList.add('show');
-  ui.activeTab = id; savePrefs();
+  const view = b.getAttribute('data-view'); if(!view) return;
+  setView(view);
+  ui.activeView = view; savePrefs();
 });
 
 // Dates actions
@@ -445,10 +448,10 @@ function updateRecurUI(){
   everyField.style.display  = (itemRecurring.checked && itemFreq.value==='CUSTOM') ? '' : 'none';
   if(itemRecurring.checked){
     const n = Math.max(1, Number(itemEvery.value||1));
-    const map = { WEEKLY:'ogni settimana', BIWEEKLY:'ogni 2 settimane', MONTHLY:'ogni mese', CUSTOM:`ogni ${n} settiman${n===1?'a':'e'}` };
-    recurHint.textContent = `Verrà inserito automaticamente ${map[itemFreq.value]||''}.`;
+    const map = { WEEKLY:'every week', BIWEEKLY:'every 2 weeks', MONTHLY:'every month', CUSTOM:`every ${n} week${n===1?'':'s'}` };
+    recurHint.textContent = `It will be added automatically ${map[itemFreq.value]||''}.`;
   } else {
-    recurHint.textContent = 'Senza ricorrenza: la voce parte vuota, inserisci gli importi a mano nelle settimane.';
+    recurHint.textContent = 'No recurrence: the item starts empty — enter the weekly amounts by hand.';
   }
 }
 itemRecurring.addEventListener('change', updateRecurUI);
@@ -458,7 +461,7 @@ itemEvery.addEventListener('input', updateRecurUI);
 function openItemModal(ctx){
   modalCtx = ctx;
   if(ctx.mode==='add'){
-    itemModalTitle.textContent = ctx.type==='INFLOW' ? 'Nuova entrata' : 'Nuova uscita';
+    itemModalTitle.textContent = ctx.type==='INFLOW' ? 'New inflow' : 'New outflow';
     itemNameField.style.display = '';
     itemName.value = '';
     itemRecurring.checked = false;
@@ -467,7 +470,7 @@ function openItemModal(ctx){
     itemEvery.value = '4';
   } else { // 'recur'
     const row = model[ctx.section].find(r=>r.id===ctx.rowId);
-    itemModalTitle.textContent = `Ricorrenza — ${row?.name || ''}`;
+    itemModalTitle.textContent = `Recurrence — ${row?.name || ''}`;
     itemNameField.style.display = 'none';
     itemRecurring.checked = !!row?.recur;
     itemAmount.value = Math.abs(Number(row?.recur?.amount ?? (ctx.type==='INFLOW'?1000:50)));
@@ -531,11 +534,11 @@ async function init(){
   const saved = await storage.load();
   model = saved.model || demo(); materialize(model); save(model);
 
-  ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',activeTab:'dates'};
+  ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',activeView:'dashboard'};
   if(!ui.gran) ui.gran='MONTH';
   if(!ui.collapsed) ui.collapsed={};
   if(typeof ui.eopThreshold!=='number') ui.eopThreshold=0;
-  if(!ui.activeTab) ui.activeTab='dates';
+  if(!ui.activeView) ui.activeView='dashboard';
 
   // Initialize inputs to current model horizon
   if(model.weeks.length){
@@ -546,9 +549,8 @@ async function init(){
   eopInput.value = ui.eopThreshold;
   mViewLabel.textContent = (ui.gran==='WEEK'?'Weeks':ui.gran==='MONTH'?'Months':ui.gran==='QUARTER'?'Quarters':'Years');
 
-  // Restore active tab
-  const t = ui.activeTab || 'dates';
-  const b = document.querySelector(`.tab[data-tab="${t}"]`); if(b){ b.click() }
+  // Restore active view
+  setView(ui.activeView || 'dashboard');
 
   // Initial render
   render();

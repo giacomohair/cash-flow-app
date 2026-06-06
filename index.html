@@ -6,35 +6,35 @@
 <title>Cash‑Flow Forecaster — v6e (tabbed toolbar)</title>
 <link rel="stylesheet" href="css/styles.css"/>
 </head>
-<body>
+<body class="view-dashboard">
 
-<!-- Auth gate: visibile finché non c'è una sessione attiva -->
+<!-- Auth gate: shown until there is an active session -->
 <div id="authScreen" class="auth-screen">
   <div class="auth-card">
     <h1>Cash‑Flow Forecaster</h1>
-    <p class="auth-sub" id="authSub">Accedi per continuare</p>
+    <p class="auth-sub" id="authSub">Sign in to continue</p>
 
     <div id="authError" class="auth-error" style="display:none"></div>
     <div id="authMsg" class="auth-msg" style="display:none"></div>
 
-    <!-- Accesso con password -->
+    <!-- Password sign in -->
     <form id="loginForm" class="auth-form">
       <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" required>
       <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required>
-      <button type="submit" class="primary">Accedi</button>
+      <button type="submit" class="primary">Sign in</button>
       <div class="auth-links">
-        <a href="#" id="toRegister">Crea un account</a>
+        <a href="#" id="toRegister">Create an account</a>
       </div>
     </form>
 
-    <!-- Registrazione -->
+    <!-- Registration -->
     <form id="registerForm" class="auth-form" style="display:none">
       <input id="regEmail" type="email" placeholder="Email" autocomplete="email" required>
-      <input id="regPassword" type="password" placeholder="Password (min 8, lettere e numeri)" autocomplete="new-password" required>
-      <input id="regPassword2" type="password" placeholder="Conferma password" autocomplete="new-password" required>
-      <button type="submit" class="primary">Registrati</button>
+      <input id="regPassword" type="password" placeholder="Password (min 8, letters and numbers)" autocomplete="new-password" required>
+      <input id="regPassword2" type="password" placeholder="Confirm password" autocomplete="new-password" required>
+      <button type="submit" class="primary">Sign up</button>
       <div class="auth-links">
-        <a href="#" id="toLoginFromReg">Hai già un account? Accedi</a>
+        <a href="#" id="toLoginFromReg">Already have an account? Sign in</a>
       </div>
     </form>
   </div>
@@ -47,58 +47,19 @@
     <div class="spacer"></div>
   </div>
 
-  <!-- Tabbed toolbar -->
+  <!-- View navigation -->
   <div class="toolbar">
     <div role="tablist" class="tablist" id="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-tab="dates">Dates</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="view">View</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="horizon">Horizon</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="items">Items</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="alerts">Alerts</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="more">More</button>
+      <button class="tab" role="tab" aria-selected="true" data-view="dashboard">Dashboard</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="full">Cash-flow view and data input</button>
     </div>
     <div class="tabpanes">
-      <!-- Dates -->
-      <div class="tabpane show" id="pane-dates">
+      <!-- Date range: shown in Dashboard and Full cash-flow view -->
+      <div class="controls" id="dateBar">
         <label title="Start date (snaps to Monday)">Start&nbsp;<input id="startDate" type="date"></label>
         <label title="End date (snaps to Sunday)">End&nbsp;<input id="endDate" type="date"></label>
         <button class="ghost" id="applyDatesBtn">Apply dates</button>
         <button class="ghost" id="init6mBtn">Init 6m</button>
-      </div>
-      <!-- View / Grouping -->
-      <div class="tabpane" id="pane-view">
-        <label>View
-          <select id="granSel">
-            <option value="WEEK">Weeks</option>
-            <option value="MONTH" selected>Months</option>
-            <option value="QUARTER">Quarters</option>
-            <option value="YEAR">Years</option>
-          </select>
-        </label>
-        <button class="ghost" id="collapseAllBtn">Collapse all</button>
-        <button class="ghost" id="expandAllBtn">Expand all</button>
-      </div>
-      <!-- Horizon growth -->
-      <div class="tabpane" id="pane-horizon">
-        <button class="ghost" id="addWeekBtn">+ Week</button>
-        <button class="ghost" id="plus3mBtn">+ 3 months</button>
-        <button class="ghost" id="plus6mBtn">+ 6 months</button>
-      </div>
-      <!-- Items -->
-      <div class="tabpane" id="pane-items">
-        <button class="ghost" id="addInflowBtn">+ Inflow</button>
-        <button class="ghost" id="addOutflowBtn">+ Outflow</button>
-      </div>
-      <!-- Alerts -->
-      <div class="tabpane" id="pane-alerts">
-        <label title="Cells turn red when EoP is below this amount">
-          EoP Alert&nbsp;<input id="eopThreshold" type="number" value="0" step="100" />
-        </label>
-      </div>
-      <!-- More -->
-      <div class="tabpane" id="pane-more">
-        <button class="ghost" id="resetBtn">Reset → Demo</button>
-        <span style="opacity:.6">More settings coming soon…</span>
       </div>
     </div>
   </div>
@@ -141,10 +102,40 @@
 
   <div id="msg" style="display:none;margin:8px 0;padding:8px 10px;border:1px solid #fde68a;background:#fffbeb;color:#7c2d12;border-radius:8px"></div>
 
-  <div class="panel">
+  <!-- Settings (sub-section of Full cash-flow view): applied to the table below -->
+  <details id="settingsPanel" class="settings-panel" open>
+    <summary><span class="settings-title">⚙️ Settings</span><span class="settings-caption">applied to the table below</span></summary>
+    <div class="controls" id="settingsControls">
+      <label>View
+        <select id="granSel">
+          <option value="WEEK">Weeks</option>
+          <option value="MONTH" selected>Months</option>
+          <option value="QUARTER">Quarters</option>
+          <option value="YEAR">Years</option>
+        </select>
+      </label>
+      <button class="ghost" id="collapseAllBtn">Collapse all</button>
+      <button class="ghost" id="expandAllBtn">Expand all</button>
+      <span class="sep"></span>
+      <button class="ghost" id="addWeekBtn">+ Week</button>
+      <button class="ghost" id="plus3mBtn">+ 3 months</button>
+      <button class="ghost" id="plus6mBtn">+ 6 months</button>
+      <span class="sep"></span>
+      <button class="ghost" id="addInflowBtn">+ Inflow</button>
+      <button class="ghost" id="addOutflowBtn">+ Outflow</button>
+      <span class="sep"></span>
+      <label title="Cells turn red when EoP is below this amount">
+        EoP Alert&nbsp;<input id="eopThreshold" type="number" value="0" step="100" />
+      </label>
+      <span class="sep"></span>
+      <button class="ghost" id="resetBtn">Reset → Demo</button>
+    </div>
+  </details>
+
+  <div class="panel" id="gridPanel">
     <table id="grid"></table>
   </div>
-  <p style="opacity:.7;font-size:12px">Tip: Click a period header (▼/▶) to expand/compact. Aggregated cells are read‑only; expand to edit week values.</p>
+  <p id="gridTip" style="opacity:.7;font-size:12px">Tip: Click a period header (▼/▶) to expand/compact. Aggregated cells are read‑only; expand to edit week values.</p>
 </div>
 
 <!-- Mobile quick actions -->
@@ -160,42 +151,42 @@
 <div class="modal" id="itemModal">
   <div class="modal-overlay" id="itemModalOverlay"></div>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
-    <h2 id="itemModalTitle">Nuova voce</h2>
+    <h2 id="itemModalTitle">New item</h2>
 
     <label class="field" id="itemNameField">
-      <span>Nome</span>
-      <input id="itemName" type="text" placeholder="es. Stipendio">
+      <span>Name</span>
+      <input id="itemName" type="text" placeholder="e.g. Salary">
     </label>
 
     <label class="field switch-field">
       <input id="itemRecurring" type="checkbox">
-      <span>Ricorrente — si ripete automaticamente</span>
+      <span>Recurring — repeats automatically</span>
     </label>
 
     <div id="recurFields">
       <label class="field">
-        <span>Importo per occorrenza (€)</span>
+        <span>Amount per occurrence (€)</span>
         <input id="itemAmount" type="number" inputmode="decimal" placeholder="1000">
       </label>
       <label class="field">
-        <span>Ogni quanto si ripete</span>
+        <span>How often it repeats</span>
         <select id="itemFreq">
-          <option value="WEEKLY">Ogni settimana</option>
-          <option value="BIWEEKLY">Ogni 2 settimane</option>
-          <option value="MONTHLY">Ogni mese</option>
-          <option value="CUSTOM">Personalizzata…</option>
+          <option value="WEEKLY">Every week</option>
+          <option value="BIWEEKLY">Every 2 weeks</option>
+          <option value="MONTHLY">Every month</option>
+          <option value="CUSTOM">Custom…</option>
         </select>
       </label>
       <label class="field" id="everyField" style="display:none">
-        <span>Ogni quante settimane</span>
+        <span>Every how many weeks</span>
         <input id="itemEvery" type="number" inputmode="numeric" min="1" value="4">
       </label>
       <p class="field-hint" id="recurHint"></p>
     </div>
 
     <div class="modal-actions">
-      <button class="ghost" id="itemCancel" type="button">Annulla</button>
-      <button class="primary" id="itemSave" type="button">Salva</button>
+      <button class="ghost" id="itemCancel" type="button">Cancel</button>
+      <button class="primary" id="itemSave" type="button">Save</button>
     </div>
   </div>
 </div>
