@@ -156,6 +156,50 @@
   <button class="btn" id="mResetBtn">Reset</button>
 </div>
 
+<!-- Modale: aggiunta voce / ricorrenza (sostituisce i prompt nativi) -->
+<div class="modal" id="itemModal">
+  <div class="modal-overlay" id="itemModalOverlay"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <h2 id="itemModalTitle">Nuova voce</h2>
+
+    <label class="field" id="itemNameField">
+      <span>Nome</span>
+      <input id="itemName" type="text" placeholder="es. Stipendio">
+    </label>
+
+    <label class="field switch-field">
+      <input id="itemRecurring" type="checkbox">
+      <span>Ricorrente — si ripete automaticamente</span>
+    </label>
+
+    <div id="recurFields">
+      <label class="field">
+        <span>Importo per occorrenza (€)</span>
+        <input id="itemAmount" type="number" inputmode="decimal" placeholder="1000">
+      </label>
+      <label class="field">
+        <span>Ogni quanto si ripete</span>
+        <select id="itemFreq">
+          <option value="WEEKLY">Ogni settimana</option>
+          <option value="BIWEEKLY">Ogni 2 settimane</option>
+          <option value="MONTHLY">Ogni mese</option>
+          <option value="CUSTOM">Personalizzata…</option>
+        </select>
+      </label>
+      <label class="field" id="everyField" style="display:none">
+        <span>Ogni quante settimane</span>
+        <input id="itemEvery" type="number" inputmode="numeric" min="1" value="4">
+      </label>
+      <p class="field-hint" id="recurHint"></p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="ghost" id="itemCancel" type="button">Annulla</button>
+      <button class="primary" id="itemSave" type="button">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- Supabase client (UMD via CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>

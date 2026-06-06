@@ -228,7 +228,7 @@ function render(){
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
-          html += `<td><input class="cell" type="number" value="${v}" onblur="editCell('positives','${r.id}','${wid}', this.value)"></td>`;
+          html += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('positives','${r.id}','${wid}', this.value)"></td>`;
         }
       }
     }
@@ -250,7 +250,7 @@ function render(){
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
-          html += `<td><input class="cell" type="number" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
+          html += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
         }
       }
     }
@@ -337,13 +337,8 @@ function deleteRow(section,rowId){
   save(model); render();
 }
 function editRecurrence(section,rowId){
-  const group = model[section];
-  const row = group.find(r=>r.id===rowId); if(!row) return;
-  const amount = prompt('Amount per occurrence:', row.recur?.amount ?? (row.type==='INFLOW'?1000:-100)); if(amount===null) return;
-  const freq = prompt('Frequency (WEEKLY, BIWEEKLY, MONTHLY, CUSTOM):', row.recur?.kind ?? 'WEEKLY'); if(freq===null) return;
-  let every = 1; if(freq==='CUSTOM'){ const n = prompt('Every how many weeks?', row.recur?.every ?? 4); if(n===null) return; every = Number(n||1) }
-  row.recur = {kind:freq, every, amount: Number(amount||0)};
-  materialize(model); save(model); render();
+  const row = model[section].find(r=>r.id===rowId); if(!row) return;
+  openItemModal({ mode:'recur', section, rowId, type: row.type });
 }
 
 // Drawer & period controls
@@ -404,24 +399,9 @@ addWeekBtn.addEventListener('click', addWeek);
 plus3mBtn.addEventListener('click', ()=>{ for(let i=0;i<13;i++) addWeek() });
 plus6mBtn.addEventListener('click', ()=>{ for(let i=0;i<26;i++) addWeek() });
 
-// Items actions
-addInflowBtn.addEventListener('click', ()=>{
-  const name = prompt('New inflow name:'); if(!name) return;
-  const amount = Number(prompt('Default amount (optional, can be 0):','1000')||0);
-  const recur = confirm('Make it recurring?');
-  const row = {id:uid(), name, type:'INFLOW', values:Object.fromEntries(model.weeks.map(w=>[w.id,0]))};
-  if(recur){ const freq=prompt('Frequency (WEEKLY, BIWEEKLY, MONTHLY, CUSTOM):','WEEKLY')||'WEEKLY'; let every=1; if(freq==='CUSTOM'){ every=Number(prompt('Every how many weeks?','4')||1) } row.recur={kind:freq,every,amount} }
-  model.positives.push(row); materialize(model); save(model); render();
-});
-addOutflowBtn.addEventListener('click', ()=>{
-  const name = prompt('New outflow name:'); if(!name) return;
-  const amount = Number(prompt('Default amount (negative value):','-50')||0);
-  const recur = confirm('Make it recurring?');
-  const row = {id:uid(), name, type:'OUTFLOW', values:Object.fromEntries(model.weeks.map(w=>[w.id,0]))};
-  if(recur){ const freq=prompt('Frequency (WEEKLY, BIWEEKLY, MONTHLY, CUSTOM):','WEEKLY')||'WEEKLY'; let every=1; if(freq==='CUSTOM'){ every=Number(prompt('Every how many weeks?','4')||1) } row.recur={kind:freq,every,amount} }
-  const adjIdx = model.negatives.findIndex(r=>r.isAdjustment); if(adjIdx>=0) model.negatives.splice(adjIdx,0,row); else model.negatives.push(row);
-  materialize(model); save(model); render();
-});
+// Items actions (aprono il modale invece dei prompt nativi)
+addInflowBtn.addEventListener('click', ()=> openItemModal({mode:'add', type:'INFLOW'}));
+addOutflowBtn.addEventListener('click', ()=> openItemModal({mode:'add', type:'OUTFLOW'}));
 
 // Alerts actions
 eopInput.addEventListener('change', ()=>{ ui.eopThreshold = Number(eopInput.value||0); savePrefs(); render() });
@@ -444,6 +424,100 @@ mCollapseBtn.addEventListener('click', ()=>{
 mAddWeekBtn.addEventListener('click', ()=> addWeek());
 mPlus3Btn.addEventListener('click', ()=>{ for(let i=0;i<13;i++) addWeek() });
 mResetBtn.addEventListener('click', ()=>{ if(confirm('Replace current data with demo?')){ model=demo(); materialize(model); save(model); startInput.value=model.weeks[0].start; endInput.value=model.weeks[model.weeks.length-1].end; render() } });
+
+// ===== Modale "voce" (aggiunta / ricorrenza) =====
+const itemModal      = document.getElementById('itemModal');
+const itemModalTitle = document.getElementById('itemModalTitle');
+const itemNameField  = document.getElementById('itemNameField');
+const itemName       = document.getElementById('itemName');
+const itemRecurring  = document.getElementById('itemRecurring');
+const recurFields    = document.getElementById('recurFields');
+const itemAmount     = document.getElementById('itemAmount');
+const itemFreq       = document.getElementById('itemFreq');
+const everyField     = document.getElementById('everyField');
+const itemEvery      = document.getElementById('itemEvery');
+const recurHint      = document.getElementById('recurHint');
+
+let modalCtx = null; // { mode:'add'|'recur', type, section?, rowId? }
+
+function updateRecurUI(){
+  recurFields.style.display = itemRecurring.checked ? '' : 'none';
+  everyField.style.display  = (itemRecurring.checked && itemFreq.value==='CUSTOM') ? '' : 'none';
+  if(itemRecurring.checked){
+    const n = Math.max(1, Number(itemEvery.value||1));
+    const map = { WEEKLY:'ogni settimana', BIWEEKLY:'ogni 2 settimane', MONTHLY:'ogni mese', CUSTOM:`ogni ${n} settiman${n===1?'a':'e'}` };
+    recurHint.textContent = `Verrà inserito automaticamente ${map[itemFreq.value]||''}.`;
+  } else {
+    recurHint.textContent = 'Senza ricorrenza: la voce parte vuota, inserisci gli importi a mano nelle settimane.';
+  }
+}
+itemRecurring.addEventListener('change', updateRecurUI);
+itemFreq.addEventListener('change', updateRecurUI);
+itemEvery.addEventListener('input', updateRecurUI);
+
+function openItemModal(ctx){
+  modalCtx = ctx;
+  if(ctx.mode==='add'){
+    itemModalTitle.textContent = ctx.type==='INFLOW' ? 'Nuova entrata' : 'Nuova uscita';
+    itemNameField.style.display = '';
+    itemName.value = '';
+    itemRecurring.checked = false;
+    itemAmount.value = ctx.type==='INFLOW' ? '1000' : '50';
+    itemFreq.value = 'WEEKLY';
+    itemEvery.value = '4';
+  } else { // 'recur'
+    const row = model[ctx.section].find(r=>r.id===ctx.rowId);
+    itemModalTitle.textContent = `Ricorrenza — ${row?.name || ''}`;
+    itemNameField.style.display = 'none';
+    itemRecurring.checked = !!row?.recur;
+    itemAmount.value = Math.abs(Number(row?.recur?.amount ?? (ctx.type==='INFLOW'?1000:50)));
+    itemFreq.value = row?.recur?.kind || 'WEEKLY';
+    itemEvery.value = row?.recur?.every || 4;
+  }
+  updateRecurUI();
+  itemModal.classList.add('show');
+  setTimeout(()=>{ (ctx.mode==='add' ? itemName : itemAmount).focus(); }, 50);
+}
+function closeItemModal(){ itemModal.classList.remove('show'); modalCtx = null; }
+
+function buildRecur(type){
+  const kind = itemFreq.value;
+  const every = kind==='CUSTOM' ? Math.max(1, Number(itemEvery.value||1)) : 1;
+  let amount = Math.abs(Number(itemAmount.value||0));
+  if(type==='OUTFLOW') amount = -amount; // uscite negative (coerente con editCell)
+  return { kind, every, amount };
+}
+
+function saveItemModal(){
+  if(!modalCtx) return;
+  if(modalCtx.mode==='add'){
+    const name = itemName.value.trim();
+    if(!name){ itemName.focus(); return; }
+    const type = modalCtx.type;
+    const row = { id:uid(), name, type, values:Object.fromEntries(model.weeks.map(w=>[w.id,0])) };
+    if(itemRecurring.checked) row.recur = buildRecur(type);
+    if(type==='INFLOW'){
+      model.positives.push(row);
+    } else {
+      const adjIdx = model.negatives.findIndex(r=>r.isAdjustment);
+      if(adjIdx>=0) model.negatives.splice(adjIdx,0,row); else model.negatives.push(row);
+    }
+  } else { // 'recur'
+    const row = model[modalCtx.section].find(r=>r.id===modalCtx.rowId);
+    if(!row){ closeItemModal(); return; }
+    if(itemRecurring.checked) row.recur = buildRecur(row.type);
+    else delete row.recur;
+  }
+  materialize(model); save(model); render();
+  closeItemModal();
+}
+
+document.getElementById('itemCancel').addEventListener('click', closeItemModal);
+document.getElementById('itemModalOverlay').addEventListener('click', closeItemModal);
+document.getElementById('itemSave').addEventListener('click', saveItemModal);
+// Invio per confermare, Esc per annullare
+[itemName, itemAmount, itemEvery].forEach(el=> el.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveItemModal(); } }));
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && itemModal.classList.contains('show')) closeItemModal(); });
 
 // Expose some funcs for inline handlers
 window.togglePeriod = togglePeriod;
