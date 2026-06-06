@@ -39,6 +39,18 @@ function demo(withDates=null){
   ];
   return {bop0:1500,weeks,positives,negatives};
 }
+// Modello vuoto per i nuovi utenti: orizzonte di default ma nessuna voce.
+// Mantiene solo le righe strutturali del data model: Savings (locked) e Adjustment, vuote.
+function emptyModel(withDates=null){
+  let weeks = withDates ? weeksFromDates(withDates.start, withDates.end) : makeWeeks(26);
+  const z=zero(weeks);
+  const positives=[];
+  const negatives=[
+    {id:uid(),name:'Savings',type:'OUTFLOW',locked:true,values:{...z}},
+    {id:uid(),name:'Adjustment',type:'OUTFLOW',values:{...z},isAdjustment:true},
+  ];
+  return {bop0:0,weeks,positives,negatives};
+}
 function isMonthlyHit(weekStartISO, anchorISO){
   const w=new Date(weekStartISO), anchor=new Date(anchorISO);
   for(let d=0; d<7; d++){ const cur=addDays(w,d); if(cur.getDate()===anchor.getDate()) return true }
@@ -532,7 +544,7 @@ window.openPersonalArea = ()=> openPersonalArea();
 // ===== Bootstrap (async: carica da storage, poi inizializza UI e render) =====
 async function init(){
   const saved = await storage.load();
-  model = saved.model || demo(); materialize(model); save(model);
+  model = saved.model || emptyModel(); materialize(model); save(model);
 
   ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',activeView:'dashboard'};
   if(!ui.gran) ui.gran='MONTH';

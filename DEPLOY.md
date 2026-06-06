@@ -1,8 +1,11 @@
 # Deploy — Cash-Flow Forecaster
 
-Sito **statico** (HTML/CSS/JS, nessuno step di build). Si pubblica collegando il repo
-GitHub a Vercel (o Netlify). Le chiavi Supabase sono già in `js/config.js` (la
-publishable/anon key è pubblica per design): **nessuna variabile d'ambiente** da impostare.
+**Produzione (live):** https://cash-flow-app-eight.vercel.app
+
+Sito **statico** (HTML/CSS/JS, nessuno step di build), pubblicato su Vercel collegato al
+repo GitHub: ogni `git push` su `main` ridistribuisce in automatico. Le chiavi Supabase
+sono già in `js/config.js` (la publishable/anon key è pubblica per design):
+**nessuna variabile d'ambiente** da impostare.
 
 ## Deploy su Vercel (consigliato)
 
@@ -37,8 +40,9 @@ Il certificato HTTPS viene emesso automaticamente.
 Quando il sito è online, nel dashboard Supabase:
 
 1. **Authentication → URL Configuration**
-   - **Site URL**: l'URL di produzione (es. `https://cashflow.tuodominio.it`).
-   - **Redirect URLs**: aggiungi lo stesso URL (serve quando attiverai conferma email / OTP / magic link).
+   - **Site URL**: `https://cash-flow-app-eight.vercel.app` (aggiorna quando colleghi un dominio).
+   - **Redirect URLs**: `https://cash-flow-app-eight.vercel.app/**` e `http://localhost:8000/**`
+     (serve quando attiverai conferma email / OTP / magic link).
 2. **Email/SMTP** (per riattivare conferma email e l'OTP rinviato): configura un SMTP
    proprio in **Authentication → SMTP Settings** (es. Resend free tier), poi puoi
    riattivare "Confirm email" e l'accesso con codice senza i limiti del tier gratuito.
