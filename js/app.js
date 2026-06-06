@@ -479,4 +479,5 @@ async function init(){
   // Initial render
   render();
 }
-init();
+// L'avvio è gestito da auth.js dopo l'autenticazione (Fase 2).
+window.initApp = init;

@@ -7,6 +7,23 @@
 <link rel="stylesheet" href="css/styles.css"/>
 </head>
 <body>
+
+<!-- Auth gate (Fase 2): visibile finché non c'è una sessione attiva -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1>Cash‑Flow Forecaster</h1>
+    <p class="auth-sub">Accedi o registrati per continuare</p>
+    <form id="authForm">
+      <input id="authEmail" type="email" placeholder="Email" autocomplete="email" required>
+      <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" required>
+      <div id="authError" class="auth-error" style="display:none"></div>
+      <div id="authMsg" class="auth-msg" style="display:none"></div>
+      <button type="submit" id="loginBtn" class="primary">Accedi</button>
+      <button type="button" id="signupBtn" class="ghost">Registrati</button>
+    </form>
+  </div>
+</div>
+
 <header>
   <div class="bar">
     <button class="hamburger" id="menuBtn" title="Menu">☰</button>
@@ -76,9 +93,11 @@
   <div class="overlay" id="closeDrawer"></div>
   <div class="panel">
     <h2>Menu</h2>
+    <div id="userInfo" style="font-size:13px;opacity:.8;margin-bottom:10px;word-break:break-all"></div>
     <a href="#" onclick="openPersonalArea();return false;">👤 Personal Area</a>
     <a href="#" onclick="alert('Settings coming soon');return false;">⚙️ Settings</a>
     <a href="#" onclick="alert('Help coming soon');return false;">❓ Help</a>
+    <a href="#" id="logoutBtn">🚪 Logout</a>
     <hr style="margin:12px 0;border:none;border-top:1px solid var(--line)"/>
     <p style="font-size:12px;opacity:.7">Placeholder menu for future features.</p>
   </div>
@@ -121,7 +140,12 @@
   <button class="btn" id="mResetBtn">Reset</button>
 </div>
 
+<!-- Supabase client (UMD via CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/app.js"></script>
+<script src="js/auth.js"></script>
 </body>
 </html>

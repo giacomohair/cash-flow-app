@@ -91,3 +91,18 @@ th .toggle{cursor:pointer;color:#2563eb}
   .desktop-only{display:none}
   body{padding-bottom:58px}
 }
+/* Auth gate (Fase 2) */
+.auth-screen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:16px}
+.auth-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;width:100%;max-width:360px}
+.auth-card h1{font-size:20px;margin:0 0 4px 0}
+.auth-sub{margin:0 0 16px 0;font-size:13px;opacity:.7}
+#authForm{display:flex;flex-direction:column;gap:10px}
+#authForm input{border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:10px;width:100%;font:inherit}
+#authForm button{width:100%}
+.auth-error{color:var(--red);font-size:13px;background:var(--warn-bg);border:1px solid #fecaca;border-radius:8px;padding:8px 10px}
+.auth-msg{color:#7c2d12;font-size:13px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px}
+/* L'app è nascosta finché non c'è una sessione; authScreen sparisce una volta dentro */
+body:not(.authed) header,
+body:not(.authed) .wrap,
+body:not(.authed) .mobilebar{display:none}
+body.authed .auth-screen{display:none}
