@@ -275,7 +275,7 @@ function render(){
 
   html += `<tr class="section balances"><td class="sticky">Balances</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
   // BoP row
-  html += '<tr><td class="sticky">BoP</td>';
+  html += '<tr><td class="sticky">BoP (Beginning of Period)</td>';
   for(const p of periods){
     if(ui.collapsed[p.id]){
       const firstWid = p.weeks[0];
@@ -301,7 +301,7 @@ function render(){
   }
   html += '</tr>';
   // EoP row (with threshold highlighting + background)
-  html += '<tr><td class="sticky">EoP</td>';
+  html += '<tr><td class="sticky">EoP (End of Period)</td>';
   for(const p of periods){
     if(ui.collapsed[p.id]){
       const lastWid = p.weeks[p.weeks.length-1];
@@ -353,8 +353,24 @@ function editRecurrence(section,rowId){
   openItemModal({ mode:'recur', section, rowId, type: row.type });
 }
 
+// ===== Info modal (hamburger menu entries) =====
+const infoModal      = document.getElementById('infoModal');
+const infoModalTitle = document.getElementById('infoModalTitle');
+const infoModalBody  = document.getElementById('infoModalBody');
+function showInfo(title, body){
+  infoModalTitle.textContent = title;
+  infoModalBody.textContent = body;
+  drawer.classList.remove('show');     // chiudi il menu così il modale è visibile
+  infoModal.classList.add('show');
+}
+function closeInfoModal(){ infoModal.classList.remove('show'); }
+document.getElementById('infoModalOk').addEventListener('click', closeInfoModal);
+document.getElementById('infoModalOverlay').addEventListener('click', closeInfoModal);
+document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
+document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside “Cash-flow view and data input”.'); });
+document.getElementById('menuHelp').addEventListener('click', e=>{ e.preventDefault(); showInfo('Help', 'Coming soon — a short how-to guide on using the app.'); });
+
 // Drawer & period controls
-function openPersonalArea(){ alert('Personal Area — placeholder for profile, banks, etc.'); }
 function togglePeriod(pid){ ui.collapsed[pid] = !ui.collapsed[pid]; savePrefs(); render() }
 function collapseAll(){ const periods=buildPeriods(model, ui.gran); ui.collapsed={}; periods.forEach(p=>ui.collapsed[p.id]=true); savePrefs(); render() }
 function expandAll(){ ui.collapsed={}; savePrefs(); render() }
@@ -532,14 +548,17 @@ document.getElementById('itemModalOverlay').addEventListener('click', closeItemM
 document.getElementById('itemSave').addEventListener('click', saveItemModal);
 // Invio per confermare, Esc per annullare
 [itemName, itemAmount, itemEvery].forEach(el=> el.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveItemModal(); } }));
-document.addEventListener('keydown', e=>{ if(e.key==='Escape' && itemModal.classList.contains('show')) closeItemModal(); });
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  if(itemModal.classList.contains('show')) closeItemModal();
+  if(infoModal.classList.contains('show')) closeInfoModal();
+});
 
 // Expose some funcs for inline handlers
 window.togglePeriod = togglePeriod;
 window.editCell = editCell;
 window.deleteRow = deleteRow;
 window.editRecurrence = editRecurrence;
-window.openPersonalArea = ()=> openPersonalArea();
 
 // ===== Bootstrap (async: carica da storage, poi inizializza UI e render) =====
 async function init(){
