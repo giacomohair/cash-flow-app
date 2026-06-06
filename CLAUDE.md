@@ -80,3 +80,24 @@ Stipendio=Salary · Bonus annuale=Bonus · Mutuo=Mortgage · Asilo=Kindergarten 
 Spesa=Groceries · Governante=(da aggiungere come riga OUTFLOW) ·
 Risparmi/Satispay=parte della cassa liquida · Cassa a inizio periodo=BOP ·
 Cassa a fine periodo=EOP · Rettifica=Adjustment · Carte di credito=righe OUTFLOW.
+
+## Stato deploy (vivo)
+Produzione: https://cash-flow-app-eight.vercel.app (Vercel, auto-deploy su push a `main`).
+UI a 2 viste: "Dashboard" (date + KPI) e "Cash-flow view and data input" (tabella +
+pannello Settings). Nome app mostrato: "My cash-flow". Nuovi utenti partono da
+`emptyModel()` (nessuna voce, solo Savings/Adjustment). "Confirm email" disattivato per
+i test.
+
+## Backlog (da fare)
+1. **EoP effettivo** (deciso in Fase 0): riga EoP editabile → back-solve su Adjustment,
+   senza toccare il data model. Unica feature funzionale ancora aperta.
+2. **Sezione "Data input" separata**: schermata dedicata SOLO all'inserimento dei dati,
+   distinta da "Cash-flow view and data input" (che resta la vista tabellare). Deve essere
+   MOLTO mobile-friendly — pensata per un uso settimanale rapido da telefono. L'inserimento
+   qui aggiorna le altre viste.
+3. **Sezione "How to"**: guida d'uso in-app dell'applicazione.
+4. **Conferma email in produzione**: riattivarla quando c'è un SMTP (es. Resend),
+   altrimenti registrazioni con email finte.
+5. **OTP / login con codice via email** (rinviato in Fase 2.5): richiede lo stesso SMTP.
+6. **Opzionali**: dominio personalizzato; registrazione ristretta (uso familiare);
+   rimuovere/spostare il prototipo `cashflow-forecaster-v6e.html` in `docs/`.
