@@ -8,18 +8,34 @@
 </head>
 <body>
 
-<!-- Auth gate (Fase 2): visibile finché non c'è una sessione attiva -->
+<!-- Auth gate: visibile finché non c'è una sessione attiva -->
 <div id="authScreen" class="auth-screen">
   <div class="auth-card">
     <h1>Cash‑Flow Forecaster</h1>
-    <p class="auth-sub">Accedi o registrati per continuare</p>
-    <form id="authForm">
-      <input id="authEmail" type="email" placeholder="Email" autocomplete="email" required>
-      <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" required>
-      <div id="authError" class="auth-error" style="display:none"></div>
-      <div id="authMsg" class="auth-msg" style="display:none"></div>
-      <button type="submit" id="loginBtn" class="primary">Accedi</button>
-      <button type="button" id="signupBtn" class="ghost">Registrati</button>
+    <p class="auth-sub" id="authSub">Accedi per continuare</p>
+
+    <div id="authError" class="auth-error" style="display:none"></div>
+    <div id="authMsg" class="auth-msg" style="display:none"></div>
+
+    <!-- Accesso con password -->
+    <form id="loginForm" class="auth-form">
+      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" required>
+      <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" class="primary">Accedi</button>
+      <div class="auth-links">
+        <a href="#" id="toRegister">Crea un account</a>
+      </div>
+    </form>
+
+    <!-- Registrazione -->
+    <form id="registerForm" class="auth-form" style="display:none">
+      <input id="regEmail" type="email" placeholder="Email" autocomplete="email" required>
+      <input id="regPassword" type="password" placeholder="Password (min 8, lettere e numeri)" autocomplete="new-password" required>
+      <input id="regPassword2" type="password" placeholder="Conferma password" autocomplete="new-password" required>
+      <button type="submit" class="primary">Registrati</button>
+      <div class="auth-links">
+        <a href="#" id="toLoginFromReg">Hai già un account? Accedi</a>
+      </div>
     </form>
   </div>
 </div>

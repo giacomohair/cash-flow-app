@@ -1,18 +1,26 @@
-// ===== Autenticazione (Fase 2) =====
-// Gestisce login / registrazione / logout e fa da "gate": l'app (header, tabella,
-// mobilebar) è visibile solo con una sessione attiva. I dati restano ancora in
-// localStorage (la persistenza cloud arriva in Fase 3).
+// ===== Autenticazione =====
+// Fa da "gate": l'app è visibile solo con una sessione attiva.
+// Metodi: accesso con password e registrazione (con conferma + requisiti).
+// (Login con codice OTP via email: rinviato alla Fase 4, richiede un SMTP.)
 
-const authScreen   = document.getElementById('authScreen');
-const authForm     = document.getElementById('authForm');
-const authEmail    = document.getElementById('authEmail');
-const authPassword = document.getElementById('authPassword');
-const authError    = document.getElementById('authError');
-const authMsg      = document.getElementById('authMsg');
-const signupBtn    = document.getElementById('signupBtn');
-const logoutBtn    = document.getElementById('logoutBtn');
-const userInfo     = document.getElementById('userInfo');
+// --- Elementi ---
+const authSub   = document.getElementById('authSub');
+const authError = document.getElementById('authError');
+const authMsg   = document.getElementById('authMsg');
 
+const loginForm    = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+
+const loginEmail    = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const regEmail      = document.getElementById('regEmail');
+const regPassword   = document.getElementById('regPassword');
+const regPassword2  = document.getElementById('regPassword2');
+
+const logoutBtn = document.getElementById('logoutBtn');
+const userInfo  = document.getElementById('userInfo');
+
+// --- Avvio app (una sola volta) ---
 let appStarted = false;
 function startAppOnce(){
   if(appStarted) return;
@@ -20,10 +28,24 @@ function startAppOnce(){
   if(typeof window.initApp === 'function') window.initApp();
 }
 
+// --- Messaggi ---
 function showError(text){ authError.textContent = text; authError.style.display='block'; authMsg.style.display='none'; }
 function showMsg(text){ authMsg.textContent = text; authMsg.style.display='block'; authError.style.display='none'; }
 function clearMessages(){ authError.style.display='none'; authMsg.style.display='none'; }
 
+// --- Modalità della schermata (login / register) ---
+const SUBTITLES = {
+  login:    'Accedi per continuare',
+  register: 'Crea il tuo account'
+};
+function setMode(mode){
+  clearMessages();
+  loginForm.style.display    = (mode==='login')    ? '' : 'none';
+  registerForm.style.display = (mode==='register') ? '' : 'none';
+  authSub.textContent = SUBTITLES[mode] || '';
+}
+
+// --- Gate ---
 function enterApp(session){
   if(userInfo) userInfo.textContent = session?.user?.email || '';
   document.body.classList.add('authed');
@@ -33,35 +55,50 @@ function exitToAuth(){
   document.body.classList.remove('authed');
 }
 
-// Login (submit del form)
-authForm.addEventListener('submit', async (e)=>{
+// --- Validazione password ---
+function passwordProblem(pw, pw2){
+  if(pw.length < 8) return 'La password deve avere almeno 8 caratteri.';
+  if(!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return 'La password deve contenere sia lettere sia numeri.';
+  if(pw !== pw2) return 'Le due password non coincidono.';
+  return null;
+}
+
+// --- Navigazione tra le modalità ---
+document.getElementById('toRegister').addEventListener('click', e=>{ e.preventDefault(); setMode('register'); });
+document.getElementById('toLoginFromReg').addEventListener('click', e=>{ e.preventDefault(); setMode('login'); });
+
+// --- Accesso con password ---
+loginForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   clearMessages();
   const { error } = await sb.auth.signInWithPassword({
-    email: authEmail.value.trim(),
-    password: authPassword.value
+    email: loginEmail.value.trim(),
+    password: loginPassword.value
   });
   if(error){ showError(error.message); return; }
-  // onAuthStateChange gestisce l'ingresso nell'app
+  // onAuthStateChange entra nell'app
 });
 
-// Registrazione
-signupBtn.addEventListener('click', async ()=>{
+// --- Registrazione ---
+registerForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
   clearMessages();
-  if(!authEmail.value.trim() || !authPassword.value){ showError('Inserisci email e password.'); return; }
+  const problem = passwordProblem(regPassword.value, regPassword2.value);
+  if(problem){ showError(problem); return; }
   const { data, error } = await sb.auth.signUp({
-    email: authEmail.value.trim(),
-    password: authPassword.value
+    email: regEmail.value.trim(),
+    password: regPassword.value
   });
   if(error){ showError(error.message); return; }
   if(data.session){
-    // "Confirm email" disabilitato: utente già loggato → onAuthStateChange entra nell'app
+    // "Confirm email" disabilitato: utente già loggato → onAuthStateChange entra
   } else {
+    setMode('login');
     showMsg('Registrazione effettuata. Controlla la tua email per confermare, poi accedi.');
   }
 });
 
-// Logout
+// --- Logout ---
 if(logoutBtn){
   logoutBtn.addEventListener('click', async (e)=>{
     e.preventDefault();
@@ -71,13 +108,13 @@ if(logoutBtn){
   });
 }
 
-// Reagisce ai cambi di stato (login/logout/refresh token)
+// --- Reagisce ai cambi di stato (login/logout/refresh token) ---
 sb.auth.onAuthStateChange((_event, session)=>{
   if(session){ enterApp(session); } else { exitToAuth(); }
 });
 
-// Controllo iniziale della sessione al caricamento
+// --- Controllo iniziale della sessione ---
 (async ()=>{
   const { data:{ session } } = await sb.auth.getSession();
-  if(session){ enterApp(session); } else { exitToAuth(); }
+  if(session){ enterApp(session); } else { setMode('login'); exitToAuth(); }
 })();

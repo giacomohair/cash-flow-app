@@ -96,11 +96,14 @@ th .toggle{cursor:pointer;color:#2563eb}
 .auth-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;width:100%;max-width:360px}
 .auth-card h1{font-size:20px;margin:0 0 4px 0}
 .auth-sub{margin:0 0 16px 0;font-size:13px;opacity:.7}
-#authForm{display:flex;flex-direction:column;gap:10px}
-#authForm input{border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:10px;width:100%;font:inherit}
-#authForm button{width:100%}
-.auth-error{color:var(--red);font-size:13px;background:var(--warn-bg);border:1px solid #fecaca;border-radius:8px;padding:8px 10px}
-.auth-msg{color:#7c2d12;font-size:13px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px}
+.auth-form{display:flex;flex-direction:column;gap:10px}
+.auth-form input{border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:10px;width:100%;font:inherit}
+.auth-form button{width:100%}
+.auth-links{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.auth-links a{font-size:13px;color:var(--accent);text-decoration:none;text-align:center}
+.auth-links a:hover{text-decoration:underline}
+.auth-error{color:var(--red);font-size:13px;background:var(--warn-bg);border:1px solid #fecaca;border-radius:8px;padding:8px 10px;margin-bottom:10px}
+.auth-msg{color:#7c2d12;font-size:13px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:10px}
 /* L'app è nascosta finché non c'è una sessione; authScreen sparisce una volta dentro */
 body:not(.authed) header,
 body:not(.authed) .wrap,
