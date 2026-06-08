@@ -95,6 +95,10 @@ i test.
    distinta da "Cash-flow view and data input" (che resta la vista tabellare). Deve essere
    MOLTO mobile-friendly — pensata per un uso settimanale rapido da telefono. L'inserimento
    qui aggiorna le altre viste.
+   DIREZIONE VALIDATA (mock-up approvato): "Lista per settimana" — una sola schermata con
+   selettore settimana in alto (default = settimana corrente), mini-riepilogo BoP/Net/EoP,
+   voci Income/Expenses come campi numerici grandi, e in fondo "Actual cash now (EoP)"
+   (riusa il back-solve su Adjustment del punto 1). Salvataggio automatico.
 3. **Sezione "How to"**: guida d'uso in-app dell'applicazione.
 4. **Conferma email in produzione**: riattivarla quando c'è un SMTP (es. Resend),
    altrimenti registrazioni con email finte.

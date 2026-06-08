@@ -140,7 +140,6 @@ const granSel=document.getElementById('granSel');
 const eopInput=document.getElementById('eopThreshold');
 const collapseAllBtn=document.getElementById('collapseAllBtn');
 const expandAllBtn=document.getElementById('expandAllBtn');
-const init6mBtn=document.getElementById('init6mBtn');
 const plus3mBtn=document.getElementById('plus3mBtn');
 const plus6mBtn=document.getElementById('plus6mBtn');
 const addInflowBtn=document.getElementById('addInflowBtn');
@@ -183,6 +182,70 @@ function breaches(tWeek, thr){
   return hits;
 }
 
+// ===== Mini grafico temporale (SVG inline, nessuna dipendenza) =====
+function niceStep(range, targetTicks=4){
+  const raw = Math.max(range,1)/targetTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw/mag;
+  const step = norm<1.5?1 : norm<3?2 : norm<7?5 : 10;
+  return step*mag;
+}
+function chartSVG(values, weekLabels, opts={}){
+  const { lineColor='#FF385C', threshold=null } = opts;
+  const n = values.length;
+  const W=640, H=220, padL=64, padR=14, padT=16, padB=26;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  if(!n) return `<svg viewBox="0 0 ${W} ${H}"></svg>`;
+  const hasThr = threshold!=null && isFinite(threshold);
+  const dataMin = Math.min(...values, hasThr?threshold:Infinity);
+  const dataMax = Math.max(...values, hasThr?threshold:-Infinity);
+  // Dominio: include SEMPRE lo zero; nessun padding negativo se non ci sono valori < 0.
+  let lo0 = Math.min(0, dataMin), hi0 = Math.max(0, dataMax);
+  if(hi0===lo0) hi0 = lo0 + 1;
+  const step = niceStep(hi0-lo0);
+  const lo = Math.floor(lo0/step)*step;
+  let hi = Math.ceil(hi0/step)*step;
+  if(hi===lo) hi += step;
+  const X=i=> padL + (n<=1? innerW/2 : innerW*i/(n-1));
+  const Y=v=> padT + innerH*(1-(v-lo)/(hi-lo));
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const zeroY = Y(0);
+  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">`;
+  // Banda di allerta (sotto la soglia)
+  if(hasThr){
+    const ty=Y(threshold);
+    const bandY=Math.max(padT, Math.min(ty, padT+innerH));
+    const bandH=(padT+innerH)-bandY;
+    if(bandH>0) s += `<rect x="${padL}" y="${bandY.toFixed(1)}" width="${innerW}" height="${bandH.toFixed(1)}" fill="#FFF1F0"/>`;
+  }
+  // Griglia + etichette Y a tacche "pulite" (lo zero è enfatizzato)
+  for(let v=lo; v<=hi+1e-6; v+=step){
+    const yy=Y(v); const isZero=Math.abs(v)<1e-6;
+    s += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${(padL+innerW)}" y2="${yy.toFixed(1)}" stroke="${isZero?'#9CA3AF':'#EEF0F3'}" stroke-width="${isZero?1.2:1}"/>`;
+    s += `<text x="${padL-8}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="10" fill="${isZero?'#374151':'#9CA3AF'}">${esc(fmt(v))}</text>`;
+  }
+  // Soglia di allerta (linea tratteggiata) + etichetta
+  if(hasThr){
+    const ty=Y(threshold);
+    s += `<line x1="${padL}" y1="${ty.toFixed(1)}" x2="${(padL+innerW)}" y2="${ty.toFixed(1)}" stroke="#D93025" stroke-width="1" stroke-dasharray="4 3"/>`;
+    s += `<text x="${(padL+innerW)}" y="${(ty-4).toFixed(1)}" text-anchor="end" font-size="10" fill="#D93025">Alert ${esc(fmt(threshold))}</text>`;
+  }
+  // Area sfumata sotto la linea (fino alla base zero)
+  const linePts = values.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`);
+  s += `<path d="M${X(0).toFixed(1)},${zeroY.toFixed(1)} L${linePts.join(' L')} L${X(n-1).toFixed(1)},${zeroY.toFixed(1)} Z" fill="${lineColor}" fill-opacity="0.08"/>`;
+  // Linea
+  s += `<polyline points="${linePts.join(' ')}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Punti sotto soglia (rossi)
+  if(hasThr){
+    values.forEach((v,i)=>{ if(v<threshold) s += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" fill="#D93025"/>`; });
+  }
+  // Etichette X (prima/ultima settimana)
+  s += `<text x="${padL}" y="${H-8}" text-anchor="start" font-size="10" fill="#6B7280">${esc(weekLabels[0]||'')}</text>`;
+  if(n>1) s += `<text x="${(padL+innerW)}" y="${H-8}" text-anchor="end" font-size="10" fill="#6B7280">${esc(weekLabels[n-1]||'')}</text>`;
+  s += `</svg>`;
+  return s;
+}
+
 // ===== Render =====
 function render(){
   const tWeek = totalsByWeek(model);
@@ -198,6 +261,15 @@ function render(){
   cardAlertCount.textContent = hitWeeks.length ? String(hitWeeks.length) : '0';
   cardAlertCount.className = hitWeeks.length ? 'big bad' : 'big';
   cardAlertChips.innerHTML = hitWeeks.slice(0,8).map(h=>`<span class="chip">${h.label}</span>`).join('') + (hitWeeks.length>8? `<span class="chip">+${hitWeeks.length-8} more</span>`:'');
+
+  // Charts (Dashboard): andamento temporale di EoP (cassa) e Running Savings
+  const wkLabels = model.weeks.map(w=>weekLabelById(w.id));
+  const eopSeries = model.weeks.map(w=>tWeek[w.id].eop);
+  const savSeries = model.weeks.map(w=>tWeek[w.id].runSav);
+  const eopChartEl = document.getElementById('eopChart');
+  const savChartEl = document.getElementById('savChart');
+  if(eopChartEl) eopChartEl.innerHTML = chartSVG(eopSeries, wkLabels, {lineColor:'#0F172A', threshold:thr});
+  if(savChartEl) savChartEl.innerHTML = chartSVG(savSeries, wkLabels, {lineColor:'#0f766e'});
 
   // Table
   let html = "";
@@ -262,7 +334,12 @@ function render(){
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
-          html += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
+          if(r.isAdjustment){
+            // L'Adjustment è guidato dalla riga EoP (back-solve): sola lettura.
+            html += `<td><input class="cell" type="number" value="${v}" disabled title="Set automatically from the EoP row"></td>`;
+          } else {
+            html += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
+          }
         }
       }
     }
@@ -300,7 +377,8 @@ function render(){
     }
   }
   html += '</tr>';
-  // EoP row (with threshold highlighting + background)
+  // EoP row: editable per-week (type the actual end-of-period cash -> back-solve Adjustment).
+  // Aggregated (collapsed) periods stay read-only.
   html += '<tr><td class="sticky">EoP (End of Period)</td>';
   for(const p of periods){
     if(ui.collapsed[p.id]){
@@ -311,8 +389,9 @@ function render(){
     } else {
       for(const wid of p.weeks){
         const eop = tWeek2[wid].eop;
-        const cls = (eop < thr2) ? 'danger danger-bg' : '';
-        html += `<td class="${cls}">${fmt(eop)}</td>`;
+        const tdCls = (eop < thr2) ? 'danger-bg' : '';
+        const inCls = (eop < thr2) ? 'danger' : '';
+        html += `<td class="${tdCls}"><input class="cell eop-cell ${inCls}" type="number" inputmode="decimal" value="${eop}" onblur="editEop('${wid}', this.value)" title="Type the actual end-of-period cash; the Adjustment row is recomputed"></td>`;
       }
     }
   }
@@ -339,6 +418,18 @@ function editCell(section,rowId,weekId,raw){
   let v = Number(raw||0);
   if(row.type==='OUTFLOW' && v>0) v = -v; // auto-negative for outflows
   row.values[weekId] = v;
+  materialize(model); save(model); render();
+}
+// EoP effettivo: l'utente digita la cassa reale di fine settimana e si calcola a
+// ritroso la riga Adjustment (vedi decisione Fase 0). EOP resta calcolato (bop+net);
+// cambia solo Adjustment, il data model è preservato.
+function editEop(weekId, raw){
+  const adj = model.negatives.find(r=>r.isAdjustment); if(!adj) return;
+  const t = totalsByWeek(model)[weekId]; if(!t) return;
+  const adjVal = Number(adj.values[weekId]||0);
+  const netExclAdj = t.net - adjVal;            // net della settimana ESCLUSO Adjustment
+  const target = Number(raw||0);
+  adj.values[weekId] = target - t.bop - netExclAdj;  // bop(i)=eop(i-1), invariato da questa modifica
   materialize(model); save(model); render();
 }
 function deleteRow(section,rowId){
@@ -368,7 +459,14 @@ document.getElementById('infoModalOk').addEventListener('click', closeInfoModal)
 document.getElementById('infoModalOverlay').addEventListener('click', closeInfoModal);
 document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
 document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside “Cash-flow view and data input”.'); });
-document.getElementById('menuHelp').addEventListener('click', e=>{ e.preventDefault(); showInfo('Help', 'Coming soon — a short how-to guide on using the app.'); });
+// How-to guide modal
+const howtoModal = document.getElementById('howtoModal');
+function openHowto(){ drawer.classList.remove('show'); howtoModal.classList.add('show'); }
+function closeHowto(){ howtoModal.classList.remove('show'); }
+document.getElementById('howtoOk').addEventListener('click', closeHowto);
+document.getElementById('howtoOverlay').addEventListener('click', closeHowto);
+document.getElementById('menuHelp').addEventListener('click', e=>{ e.preventDefault(); openHowto(); });
+document.getElementById('headerHelpBtn').addEventListener('click', openHowto);
 
 // Drawer & period controls
 function togglePeriod(pid){ ui.collapsed[pid] = !ui.collapsed[pid]; savePrefs(); render() }
@@ -399,6 +497,15 @@ document.getElementById('tablist').addEventListener('click', (e)=>{
   ui.activeView = view; savePrefs();
 });
 
+// Settings panel toggle (sulla riga delle date, nella vista tabella)
+const settingsToggle = document.getElementById('settingsToggle');
+const settingsPanel = document.getElementById('settingsPanel');
+settingsToggle.addEventListener('click', ()=>{
+  const open = settingsPanel.classList.toggle('open');
+  settingsToggle.setAttribute('aria-expanded', String(open));
+  settingsToggle.textContent = open ? '⚙️ Settings ▴' : '⚙️ Settings ▾';
+});
+
 // Dates actions
 applyDatesBtn.addEventListener('click', ()=>{
   const s = startInput.value; const e = endInput.value;
@@ -418,7 +525,6 @@ applyDatesBtn.addEventListener('click', ()=>{
   toast('Horizon updated to custom dates.');
   render();
 });
-init6mBtn.addEventListener('click', ()=>{ model=demo(); materialize(model); save(model); startInput.value=model.weeks[0].start; endInput.value=model.weeks[model.weeks.length-1].end; render() });
 
 // View actions
 granSel.addEventListener('change', ()=>{ ui.gran=granSel.value; ui.collapsed={}; savePrefs(); mViewLabel.textContent = (ui.gran==='WEEK'?'Weeks':ui.gran==='MONTH'?'Months':ui.gran==='QUARTER'?'Quarters':'Years'); render() });
@@ -552,11 +658,13 @@ document.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
   if(itemModal.classList.contains('show')) closeItemModal();
   if(infoModal.classList.contains('show')) closeInfoModal();
+  if(howtoModal.classList.contains('show')) closeHowto();
 });
 
 // Expose some funcs for inline handlers
 window.togglePeriod = togglePeriod;
 window.editCell = editCell;
+window.editEop = editEop;
 window.deleteRow = deleteRow;
 window.editRecurrence = editRecurrence;
 

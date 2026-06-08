@@ -26,21 +26,31 @@ h1{margin:0;font-size:18px;letter-spacing:.2px}
 /* Date range: visibile in Dashboard e Full view */
 body.view-dashboard #dateBar,
 body.view-full #dateBar{display:flex}
-/* KPI solo in Dashboard; tabella e pannello Settings solo in Full view */
-body:not(.view-dashboard) .cards{display:none}
+/* KPI e grafici solo in Dashboard; tabella e pannello Settings solo in Full view */
+body:not(.view-dashboard) .cards,
+body:not(.view-dashboard) #charts{display:none}
 body.view-dashboard #gridPanel,
-body.view-dashboard #gridTip,
-body.view-dashboard #settingsPanel{display:none}
+body.view-dashboard #gridTip{display:none}
+/* Il pulsante Settings (sulla riga date) è solo nella vista tabella */
+body.view-dashboard #settingsToggle{display:none}
 
-/* Pannello Settings (sotto-sezione di Full cash-flow view) */
-.settings-panel{border:1px solid var(--line);border-radius:12px;background:var(--muted);margin-bottom:12px;overflow:hidden}
-.settings-panel > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:10px 16px;user-select:none}
-.settings-panel > summary::-webkit-details-marker{display:none}
-.settings-panel > summary::after{content:'▾';margin-left:auto;opacity:.6;transition:transform .15s}
-.settings-panel[open] > summary::after{transform:rotate(180deg)}
-.settings-title{font-weight:700}
-.settings-caption{font-size:12px;opacity:.65}
-.settings-panel #settingsControls{display:flex;background:var(--panel);border-top:1px solid var(--line)}
+/* Grafici temporali (Dashboard) */
+#charts{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.chart-card h3{margin:0 0 8px 0;font-size:12px;opacity:.7;text-transform:uppercase}
+.chart svg{width:100%;height:auto;display:block}
+.chart-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:12px;opacity:.8}
+.chart-legend .lg{display:inline-block;width:14px;height:0;border-radius:2px;margin-left:8px}
+.chart-legend .lg-line{height:3px}
+.chart-legend .lg-thr{height:0;border-top:2px dashed var(--red);width:16px}
+.chart-legend .lg-breach{height:10px;width:10px;border-radius:50%;background:var(--red)}
+
+/* Pannello Settings (toggled dalla riga date), controlli raggruppati per categoria */
+.settings-panel{display:none;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:12px;padding:2px 14px}
+body.view-full #settingsPanel.open{display:block}
+.settings-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.settings-group:last-child{border-bottom:none}
+.settings-label{flex:0 0 80px;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:#6B7280;font-weight:700}
 select,button,input[type="number"],input[type="date"]{
   border:1px solid var(--line);background:#fff;padding:8px 10px;border-radius:999px;cursor:pointer;color:inherit
 }
@@ -148,6 +158,16 @@ body.authed .auth-screen{display:none}
 .field-hint{font-size:12px;color:var(--chip-text);background:var(--chip-bg);border-radius:8px;padding:8px 10px;margin:0}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
 .modal-actions button{padding:10px 18px;border-radius:10px}
+
+/* Cella EoP editabile: leggero accento per distinguerla dalle altre */
+input.eop-cell{border-color:var(--accent);font-weight:600}
+input.eop-cell.danger{color:var(--red)}
+
+/* Corpo della guida How-to */
+.howto-body{max-height:60vh;overflow:auto}
+.howto-body h3{margin:14px 0 6px 0;font-size:14px}
+.howto-body ul{margin:0;padding-left:18px}
+.howto-body li{margin-bottom:6px;font-size:13px;line-height:1.5}
 
 @media (max-width: 980px){
   /* Pulsanti icona più grandi al tatto */

@@ -45,6 +45,7 @@
     <button class="hamburger" id="menuBtn" title="Menu">☰</button>
     <h1>My cash-flow</h1>
     <div class="spacer"></div>
+    <button class="ghost" id="headerHelpBtn" title="How to use the app">❓ Help</button>
   </div>
 
   <!-- View navigation -->
@@ -59,7 +60,7 @@
         <label title="Start date (snaps to Monday)">Start&nbsp;<input id="startDate" type="date"></label>
         <label title="End date (snaps to Sunday)">End&nbsp;<input id="endDate" type="date"></label>
         <button class="ghost" id="applyDatesBtn">Apply dates</button>
-        <button class="ghost" id="init6mBtn">Init 6m</button>
+        <button class="ghost" id="settingsToggle" aria-expanded="false" title="Show/hide settings for the table below">⚙️ Settings ▾</button>
       </div>
     </div>
   </div>
@@ -100,13 +101,31 @@
     </div>
   </div>
 
+  <!-- Time charts (Dashboard) -->
+  <div id="charts">
+    <div class="chart-card">
+      <h3>Cash at end of period (EoP) over time</h3>
+      <div id="eopChart" class="chart"></div>
+      <div class="chart-legend">
+        <span class="lg lg-line" style="background:#0F172A"></span> Cash (EoP)
+        <span class="lg lg-thr"></span> Alert threshold
+        <span class="lg lg-breach"></span> Below alert
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Running savings over time</h3>
+      <div id="savChart" class="chart"></div>
+      <div class="chart-legend"><span class="lg lg-line" style="background:#0f766e"></span> Cumulative savings</div>
+    </div>
+  </div>
+
   <div id="msg" style="display:none;margin:8px 0;padding:8px 10px;border:1px solid #fde68a;background:#fffbeb;color:#7c2d12;border-radius:8px"></div>
 
-  <!-- Settings (sub-section of Full cash-flow view): applied to the table below -->
-  <details id="settingsPanel" class="settings-panel" open>
-    <summary><span class="settings-title">⚙️ Settings</span><span class="settings-caption">applied to the table below</span></summary>
-    <div class="controls" id="settingsControls">
-      <label>View
+  <!-- Settings (toggled from the date row): applied to the table below, grouped by category -->
+  <div id="settingsPanel" class="settings-panel">
+    <div class="settings-group">
+      <span class="settings-label">View</span>
+      <label>Grouping&nbsp;
         <select id="granSel">
           <option value="WEEK">Weeks</option>
           <option value="MONTH" selected>Months</option>
@@ -116,21 +135,29 @@
       </label>
       <button class="ghost" id="collapseAllBtn">Collapse all</button>
       <button class="ghost" id="expandAllBtn">Expand all</button>
-      <span class="sep"></span>
+    </div>
+    <div class="settings-group">
+      <span class="settings-label">Horizon</span>
       <button class="ghost" id="addWeekBtn">+ Week</button>
       <button class="ghost" id="plus3mBtn">+ 3 months</button>
       <button class="ghost" id="plus6mBtn">+ 6 months</button>
-      <span class="sep"></span>
+    </div>
+    <div class="settings-group">
+      <span class="settings-label">Items</span>
       <button class="ghost" id="addInflowBtn">+ Inflow</button>
       <button class="ghost" id="addOutflowBtn">+ Outflow</button>
-      <span class="sep"></span>
+    </div>
+    <div class="settings-group">
+      <span class="settings-label">Alerts</span>
       <label title="Cells turn red when EoP is below this amount">
         EoP Alert&nbsp;<input id="eopThreshold" type="number" value="0" step="100" />
       </label>
-      <span class="sep"></span>
+    </div>
+    <div class="settings-group">
+      <span class="settings-label">Data</span>
       <button class="ghost" id="resetBtn">Reset → Demo</button>
     </div>
-  </details>
+  </div>
 
   <div class="panel" id="gridPanel">
     <table id="grid"></table>
@@ -199,6 +226,44 @@
     <p id="infoModalBody" style="margin:0 0 16px 0"></p>
     <div class="modal-actions">
       <button class="primary" id="infoModalOk" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale guida (How to) -->
+<div class="modal" id="howtoModal">
+  <div class="modal-overlay" id="howtoOverlay"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+    <h2 id="howtoTitle">How to use My cash-flow</h2>
+    <div class="howto-body">
+      <h3>The two views</h3>
+      <ul>
+        <li><strong>Dashboard</strong> — choose the date range and read the summary KPIs: Final EoP, Running Savings and low-balance Alerts.</li>
+        <li><strong>Cash-flow view and data input</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
+      </ul>
+      <h3>Add income &amp; expenses</h3>
+      <ul>
+        <li>In Settings use <strong>+ Inflow</strong> / <strong>+ Outflow</strong>. Turn on <strong>Recurring</strong> to repeat automatically (weekly, every 2 weeks, monthly, or custom). Outflows are stored as negative automatically.</li>
+        <li>Use 📅 on a row to change its recurrence, 🗑️ to delete it.</li>
+      </ul>
+      <h3>Edit the table</h3>
+      <ul>
+        <li>Click any week cell and type an amount — totals recalculate instantly.</li>
+        <li><strong>BoP (Beginning of Period)</strong> is the cash at the start of the week; <strong>EoP (End of Period)</strong> is the cash at the end (BoP + net flow).</li>
+        <li>You can type the <strong>actual EoP</strong> of a week directly: the <em>Adjustment</em> row is recomputed so the balance matches reality.</li>
+      </ul>
+      <h3>Alerts &amp; grouping</h3>
+      <ul>
+        <li>Set an <strong>EoP Alert</strong> threshold; weeks whose EoP falls below it turn red.</li>
+        <li>Switch grouping (Weeks / Months / Quarters / Years) and collapse/expand periods to zoom in or out.</li>
+      </ul>
+      <h3>Your data</h3>
+      <ul>
+        <li>Everything is saved automatically to your private account and synced across your devices.</li>
+      </ul>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" id="howtoOk" type="button">Got it</button>
     </div>
   </div>
 </div>
