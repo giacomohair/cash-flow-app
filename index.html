@@ -53,14 +53,26 @@
     <div role="tablist" class="tablist" id="tablist">
       <button class="tab" role="tab" aria-selected="true" data-view="dashboard">Dashboard</button>
       <button class="tab" role="tab" aria-selected="false" data-view="full">Cash-flow view and full data input</button>
-      <button class="tab" role="tab" aria-selected="false" data-view="datainput">Weekly data input</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="datainput">Weekly data updates</button>
     </div>
     <div class="tabpanes">
-      <!-- Date range: shown in Dashboard and Full cash-flow view -->
+      <!-- Date range (Dashboard + table view) + view controls and settings toggle (table view) -->
       <div class="controls" id="dateBar">
         <label title="Start date (snaps to Monday)">Start&nbsp;<input id="startDate" type="date"></label>
         <label title="End date (snaps to Sunday)">End&nbsp;<input id="endDate" type="date"></label>
         <button class="ghost" id="applyDatesBtn">Apply dates</button>
+        <span id="viewControls" class="view-controls">
+          <label title="Group the table by week, month, quarter or year">View&nbsp;
+            <select id="granSel">
+              <option value="WEEK">Weeks</option>
+              <option value="MONTH" selected>Months</option>
+              <option value="QUARTER">Quarters</option>
+              <option value="YEAR">Years</option>
+            </select>
+          </label>
+          <button class="ghost" id="collapseAllBtn">Collapse all</button>
+          <button class="ghost" id="expandAllBtn">Expand all</button>
+        </span>
         <button class="ghost" id="settingsToggle" aria-expanded="false" title="Show/hide settings for the table below">⚙️ Settings ▾</button>
       </div>
     </div>
@@ -125,19 +137,6 @@
   <!-- Settings (toggled from the date row): applied to the table below, grouped by category -->
   <div id="settingsPanel" class="settings-panel">
     <div class="settings-group">
-      <span class="settings-label">View</span>
-      <label>Grouping&nbsp;
-        <select id="granSel">
-          <option value="WEEK">Weeks</option>
-          <option value="MONTH" selected>Months</option>
-          <option value="QUARTER">Quarters</option>
-          <option value="YEAR">Years</option>
-        </select>
-      </label>
-      <button class="ghost" id="collapseAllBtn">Collapse all</button>
-      <button class="ghost" id="expandAllBtn">Expand all</button>
-    </div>
-    <div class="settings-group">
       <span class="settings-label">Horizon</span>
       <button class="ghost" id="addWeekBtn">+ Week</button>
       <button class="ghost" id="plus3mBtn">+ 3 months</button>
@@ -187,6 +186,11 @@
     <label class="field" id="itemNameField">
       <span>Name</span>
       <input id="itemName" type="text" placeholder="e.g. Salary">
+    </label>
+
+    <label class="field switch-field" id="itemCardField" style="display:none">
+      <input id="itemCard" type="checkbox">
+      <span>This is a credit card</span>
     </label>
 
     <label class="field switch-field">
@@ -244,7 +248,7 @@
       <ul>
         <li><strong>Dashboard</strong> — choose the date range and read the summary KPIs: Final EoP, Running Savings and low-balance Alerts.</li>
         <li><strong>Cash-flow view and full data input</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
-        <li><strong>Weekly data input</strong> — a fast, mobile-friendly screen to enter one week at a time (income, expenses and the actual end-of-week cash).</li>
+        <li><strong>Weekly data updates</strong> — a fast, mobile-friendly screen to update one week at a time (one-off income/expenses, credit-card charges and the actual end-of-week cash).</li>
       </ul>
       <h3>Add income &amp; expenses</h3>
       <ul>

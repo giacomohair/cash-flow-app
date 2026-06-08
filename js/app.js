@@ -34,6 +34,7 @@ function demo(withDates=null){
     {id:uid(),name:'Kindergarten',type:'OUTFLOW',recur:{kind:'WEEKLY',every:1,amount:-200},values:{...z}},
     {id:uid(),name:'Groceries',type:'OUTFLOW',recur:{kind:'WEEKLY',every:1,amount:-150},values:{...z}},
     {id:uid(),name:'Netflix',type:'OUTFLOW',recur:{kind:'MONTHLY',every:1,amount:-15},values:{...z}},
+    {id:uid(),name:'Credit card',type:'OUTFLOW',isCard:true,recur:{kind:'MONTHLY',every:1,amount:-300},values:{...z}},
     {id:uid(),name:'Savings',type:'OUTFLOW',recur:{kind:'WEEKLY',every:1,amount:-100},locked:true,values:{...z}},
     {id:uid(),name:'Adjustment',type:'OUTFLOW',values:{...z},isAdjustment:true},
   ];
@@ -266,6 +267,35 @@ function diRow(section, r, wid){
     </span>
   </div>`;
 }
+function diCardRow(r, idx){
+  // Settimane selezionabili: dalla corrente in poi; default ~4 settimane avanti.
+  const future = model.weeks.slice(idx);
+  const defK = Math.min(4, future.length-1);
+  const wkOpts = future.map((ww,k)=>`<option value="${ww.id}" ${k===defK?'selected':''}>${new Date(ww.start).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</option>`).join('');
+  const upcoming = future.filter(ww=>Number(r.values[ww.id]||0)!==0)
+    .map(ww=>`${fmt(r.values[ww.id])} on ${new Date(ww.start).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`);
+  const del = `<button class="iconbtn di-del" title="Remove this card" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`;
+  return `<div class="di-card">
+    <div class="di-card-head"><span class="di-name">${r.name}</span>${del}</div>
+    <div class="di-card-form">
+      <input id="cardAmt_${r.id}" class="di-input" type="number" inputmode="decimal" placeholder="amount">
+      <span class="di-card-when">charged</span>
+      <select id="cardWk_${r.id}" class="di-cardwk">${wkOpts}</select>
+      <button class="ghost" onclick="postCard('${r.id}')">Post</button>
+    </div>
+    <div class="di-hint">${upcoming.length ? 'Scheduled: '+upcoming.join(' · ') : 'No charge scheduled yet.'}</div>
+  </div>`;
+}
+function postCard(cardId){
+  const amtEl = document.getElementById('cardAmt_'+cardId);
+  const wkEl  = document.getElementById('cardWk_'+cardId);
+  const card  = model.negatives.find(r=>r.id===cardId);
+  if(!card || !amtEl || !wkEl) return;
+  const wid = wkEl.value; if(!wid) return;
+  const amt = Math.abs(Number(amtEl.value||0));
+  card.values[wid] = -amt;   // imposta il pagamento previsto in quella settimana (sovrascrive)
+  materialize(model); save(model); render();
+}
 function renderDataInput(tWeek){
   const el = document.getElementById('dataInput'); if(!el) return;
   if(!model.weeks.length){ el.innerHTML = '<p style="opacity:.7">No weeks in the current horizon. Set a date range in Dashboard.</p>'; return; }
@@ -274,7 +304,10 @@ function renderDataInput(tWeek){
   const w = model.weeks[idx];
   const t = tWeek[w.id];
   const dLabel = new Date(w.start).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-  const exp = model.negatives.filter(r=>!r.isAdjustment);
+  // Solo voci NON ricorrenti: le ricorrenti si gestiscono nella vista cash-flow estesa.
+  const inc = model.positives.filter(r=>!r.recur);
+  const exp = model.negatives.filter(r=>!r.isAdjustment && !r.isCard && !r.recur);
+  const cards = model.negatives.filter(r=>r.isCard);
   let h = '';
   h += `<div class="di-nav">
     <button class="ghost" onclick="diStep(-1)" ${idx<=0?'disabled':''}>‹ Prev</button>
@@ -286,13 +319,19 @@ function renderDataInput(tWeek){
     <span>Net<b>${fmt(t.net)}</b></span>
     <span>EoP<b>${fmt(t.eop)}</b></span>
   </div>`;
-  h += `<div class="di-group"><div class="di-group-title">Income</div>`;
-  h += model.positives.length ? model.positives.map(r=>diRow('positives', r, w.id)).join('') : `<div class="di-empty">No income items yet.</div>`;
+  h += `<div class="di-note">Showing one-off items only. Recurring items (e.g. Salary, Rent) update automatically — manage them in “Cash-flow view and full data input”. The summary above still reflects the full week.</div>`;
+  h += `<div class="di-group"><div class="di-group-title">Income (one-off)</div>`;
+  h += inc.length ? inc.map(r=>diRow('positives', r, w.id)).join('') : `<div class="di-empty">No one-off income this week.</div>`;
   h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'INFLOW'})">+ Add income</button>`;
   h += `</div>`;
-  h += `<div class="di-group"><div class="di-group-title">Expenses</div>`;
-  h += exp.length ? exp.map(r=>diRow('negatives', r, w.id)).join('') : `<div class="di-empty">No expense items yet.</div>`;
+  h += `<div class="di-group"><div class="di-group-title">Expenses (one-off)</div>`;
+  h += exp.length ? exp.map(r=>diRow('negatives', r, w.id)).join('') : `<div class="di-empty">No one-off expenses this week.</div>`;
   h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'OUTFLOW'})">+ Add expense</button>`;
+  h += `</div>`;
+  h += `<div class="di-group"><div class="di-group-title">Credit cards</div>`;
+  h += `<div class="di-hint" style="margin-top:0;margin-bottom:8px">A card charge hits your cash on its payment week. Enter the amount and pick the week it will be debited.</div>`;
+  h += cards.length ? cards.map(r=>diCardRow(r, idx)).join('') : `<div class="di-empty">No credit cards yet.</div>`;
+  h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'OUTFLOW',card:true})">+ Add credit card</button>`;
   h += `</div>`;
   h += `<div class="di-group"><div class="di-group-title">Actual cash at end of week</div>
     <div class="di-eoprow">
@@ -385,31 +424,54 @@ function render(){
     html += '</tr>';
   }
 
-  html += `<tr class="section outflows"><td class="sticky">Outflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
-  for(const r of model.negatives){
-    const trClass = r.isAdjustment ? 'adjustment-row' : 'outflow-row';
-    html += `<tr class="${trClass}">`;
-    const tags = [];
-    if(r.locked) tags.push('Locked');
-    if(r.isAdjustment) tags.push('Adjustment');
-    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tags.map(t=>`<span class="tag">${t}</span>`).join(' ')} ${(!r.isAdjustment && !r.locked) ? `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`:''}</div></td>`;
+  const emptyCells = periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('');
+  const negRowHTML = (r, extra='')=>{
+    const base = r.isAdjustment ? 'adjustment-row' : (r.isCard ? 'outflow-row card-row' : 'outflow-row');
+    const trClass = extra ? base+' '+extra : base;
+    let tagHTML = '';
+    if(r.locked) tagHTML += `<span class="tag">Locked</span> `;
+    if(r.isAdjustment){
+      tagHTML += `<span class="tag">Adjustment</span> `;
+    } else {
+      // Natura dell'uscita: carta di credito / ricorrente / una tantum
+      const cat = r.isCard ? {c:'tag--card', t:'Credit card'}
+                : r.recur  ? {c:'tag--recurring', t:'Recurring'}
+                :            {c:'tag--oneoff', t:'One-off'};
+      tagHTML += `<span class="tag ${cat.c}">${cat.t}</span> `;
+    }
+    let row = `<tr class="${trClass}">`;
+    row += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tagHTML}${(!r.isAdjustment && !r.locked) ? `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`:''}</div></td>`;
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
-        html += `<td class="agg-cell" title="Collapsed total — click ▶ on the period header to expand and enter weekly values"><input class="cell" type="number" value="${agg}" disabled></td>`;
+        row += `<td class="agg-cell" title="Collapsed total — click ▶ on the period header to expand and enter weekly values"><input class="cell" type="number" value="${agg}" disabled></td>`;
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
           if(r.isAdjustment){
             // L'Adjustment è guidato dalla riga EoP (back-solve): sola lettura.
-            html += `<td><input class="cell" type="number" value="${v}" disabled title="Set automatically from the EoP row"></td>`;
+            row += `<td><input class="cell" type="number" value="${v}" disabled title="Set automatically from the EoP row"></td>`;
           } else {
-            html += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
+            row += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
           }
         }
       }
     }
-    html += '</tr>';
+    row += '</tr>';
+    return row;
+  };
+
+  html += `<tr class="section outflows"><td class="sticky">Outflows</td>${emptyCells}</tr>`;
+  // Le carte restano Outflows (sfondo rossino + tag "Credit card"); un riquadro leggero
+  // racchiude l'intero gruppo, senza intestazione.
+  const cardList = model.negatives.filter(r=>r.isCard);
+  const firstCardId = cardList.length ? cardList[0].id : null;
+  const lastCardId  = cardList.length ? cardList[cardList.length-1].id : null;
+  for(const r of model.negatives){
+    let extra = '';
+    if(r.id===firstCardId) extra += ' card-row-first';
+    if(r.id===lastCardId)  extra += ' card-row-last';
+    html += negRowHTML(r, extra.trim());
   }
 
   // Totals
@@ -640,8 +702,10 @@ const itemFreq       = document.getElementById('itemFreq');
 const everyField     = document.getElementById('everyField');
 const itemEvery      = document.getElementById('itemEvery');
 const recurHint      = document.getElementById('recurHint');
+const itemCardField  = document.getElementById('itemCardField');
+const itemCard       = document.getElementById('itemCard');
 
-let modalCtx = null; // { mode:'add'|'recur', type, section?, rowId? }
+let modalCtx = null; // { mode:'add'|'recur', type, section?, rowId?, card? }
 
 function updateRecurUI(){
   recurFields.style.display = itemRecurring.checked ? '' : 'none';
@@ -661,9 +725,12 @@ itemEvery.addEventListener('input', updateRecurUI);
 function openItemModal(ctx){
   modalCtx = ctx;
   if(ctx.mode==='add'){
-    itemModalTitle.textContent = ctx.type==='INFLOW' ? 'New inflow' : 'New outflow';
+    const isCardAdd = ctx.type==='OUTFLOW';
+    itemModalTitle.textContent = ctx.card ? 'New credit card' : (ctx.type==='INFLOW' ? 'New inflow' : 'New outflow');
     itemNameField.style.display = '';
     itemName.value = '';
+    itemCardField.style.display = isCardAdd ? '' : 'none'; // spunta carta solo per le uscite
+    itemCard.checked = !!ctx.card;
     itemRecurring.checked = false;
     itemAmount.value = ctx.type==='INFLOW' ? '1000' : '50';
     itemFreq.value = 'WEEKLY';
@@ -672,6 +739,7 @@ function openItemModal(ctx){
     const row = model[ctx.section].find(r=>r.id===ctx.rowId);
     itemModalTitle.textContent = `Recurrence — ${row?.name || ''}`;
     itemNameField.style.display = 'none';
+    itemCardField.style.display = 'none';
     itemRecurring.checked = !!row?.recur;
     itemAmount.value = Math.abs(Number(row?.recur?.amount ?? (ctx.type==='INFLOW'?1000:50)));
     itemFreq.value = row?.recur?.kind || 'WEEKLY';
@@ -698,6 +766,7 @@ function saveItemModal(){
     if(!name){ itemName.focus(); return; }
     const type = modalCtx.type;
     const row = { id:uid(), name, type, values:Object.fromEntries(model.weeks.map(w=>[w.id,0])) };
+    if(type==='OUTFLOW' && itemCard.checked) row.isCard = true;
     if(itemRecurring.checked) row.recur = buildRecur(type);
     if(type==='INFLOW'){
       model.positives.push(row);
@@ -733,13 +802,14 @@ window.editCell = editCell;
 window.editEop = editEop;
 window.deleteRow = deleteRow;
 window.diStep = diStep;
+window.postCard = postCard;
 window.editRecurrence = editRecurrence;
 window.openItemModal = openItemModal;
 
 // ===== Bootstrap (async: carica da storage, poi inizializza UI e render) =====
 async function init(){
   const saved = await storage.load();
-  model = saved.model || emptyModel(); materialize(model); save(model);
+  model = saved.model || demo(); materialize(model); save(model);  // nuovi utenti: dati di esempio
 
   ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',activeView:'dashboard'};
   if(!ui.gran) ui.gran='MONTH';

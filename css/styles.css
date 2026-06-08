@@ -29,10 +29,12 @@ body.view-full #dateBar{display:flex}
 /* KPI e grafici solo in Dashboard */
 body:not(.view-dashboard) .cards,
 body:not(.view-dashboard) #charts{display:none}
-/* Tabella e pulsante Settings solo nella vista tabella (full) */
+/* Tabella, controlli View e pulsante Settings solo nella vista tabella (full) */
 body:not(.view-full) #gridPanel,
 body:not(.view-full) #gridTip,
+body:not(.view-full) #viewControls,
 body:not(.view-full) #settingsToggle{display:none}
+.view-controls{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px}
 /* Vista Data input */
 #dataInput{display:none}
 body.view-datainput #dataInput{display:block}
@@ -90,6 +92,19 @@ tbody tr.section td{color:#6B7280}
 tr.inflow-row{background:var(--lightgreen)}
 tr.outflow-row{background:var(--lightred)}
 tr.adjustment-row{background:var(--lightgray)}
+
+/* Credit cards: restano normali Outflows (sfondo rossino + tag "Credit card");
+   un riquadro leggero racchiude l'intero gruppo, senza intestazione. */
+:root{--card-border:#E7A9A9;}
+tbody tr.card-row td.sticky{border-left:1.5px solid var(--card-border)}
+tbody tr.card-row td:last-child{border-right:1.5px solid var(--card-border)}
+tbody tr.card-row-first td{border-top:1.5px solid var(--card-border)}
+tbody tr.card-row-last td{border-bottom:1.5px solid var(--card-border)}
+
+/* Tag che indicano la natura di ogni uscita */
+.tag--recurring{background:var(--chip-bg);color:var(--chip-text)}
+.tag--oneoff{background:#F3F4F6;color:#6B7280}
+.tag--card{background:var(--warn-bg);color:var(--red);border-color:#f3c0bd}
 /* Inputs */
 input.cell{width:100px;padding:6px 8px;text-align:right;border:1px solid var(--line);border-radius:8px;background:#fff}
 input.cell:disabled{opacity:.7;background:#f3f4f6;cursor:not-allowed}
@@ -196,6 +211,15 @@ td.agg-cell input[disabled]{pointer-events:none}
 .di-input.di-eop{border-color:var(--accent);font-weight:600}
 .di-empty{font-size:13px;opacity:.7;padding:4px 0}
 .di-hint{font-size:12px;opacity:.7;margin-top:8px}
+.di-note{font-size:12px;color:var(--chip-text);background:var(--chip-bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:12px;line-height:1.4}
+/* Carte di credito nel Weekly data input */
+.di-card{border-bottom:1px solid var(--line);padding:10px 0}
+.di-card:last-of-type{border-bottom:none}
+.di-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.di-card-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.di-card-form .di-input{width:110px}
+.di-card-when{font-size:13px;opacity:.7}
+.di-cardwk{border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;background:#fff}
 
 @media (max-width: 980px){
   /* Pulsanti icona più grandi al tatto */
