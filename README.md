@@ -9,9 +9,9 @@ start/end of each week. Aggregable by week / month / quarter / year.
 ## Features
 
 - **Dashboard** — date range, summary KPIs (Final EoP, Running Savings, low-balance Alerts) and time charts.
-- **Cash-flow view and full data input** — the full expandable table, with a collapsible
-  *Settings* panel (grouping, horizon, items, alerts, reset) applied to the table below.
 - **Weekly data updates** — a fast, mobile-friendly screen to update one week at a time (one-off items + credit-card charges).
+- **Full view (best on desktop)** — the full expandable table, with a collapsible
+  *Settings* panel (grouping, horizon, items, alerts, reset) applied to the table below.
 - Recurring or one-off inflows/outflows via a clear add/edit dialog.
 - Multi-user with email/password login; each user's data is **private** (Supabase Row Level Security).
 - Responsive, usable from a mobile browser.

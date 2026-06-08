@@ -146,7 +146,6 @@ const plus6mBtn=document.getElementById('plus6mBtn');
 const addInflowBtn=document.getElementById('addInflowBtn');
 const addOutflowBtn=document.getElementById('addOutflowBtn');
 const addWeekBtn=document.getElementById('addWeekBtn');
-const resetBtn=document.getElementById('resetBtn');
 
 // Mobile
 const mViewBtn=document.getElementById('mViewBtn');
@@ -154,7 +153,6 @@ const mViewLabel=document.getElementById('mViewLabel');
 const mCollapseBtn=document.getElementById('mCollapseBtn');
 const mAddWeekBtn=document.getElementById('mAddWeekBtn');
 const mPlus3Btn=document.getElementById('mPlus3Btn');
-const mResetBtn=document.getElementById('mResetBtn');
 
 // Drawer
 const drawer=document.getElementById('drawer');
@@ -319,7 +317,7 @@ function renderDataInput(tWeek){
     <span>Net<b>${fmt(t.net)}</b></span>
     <span>EoP<b>${fmt(t.eop)}</b></span>
   </div>`;
-  h += `<div class="di-note">Showing one-off items only. Recurring items (e.g. Salary, Rent) update automatically — manage them in “Cash-flow view and full data input”. The summary above still reflects the full week.</div>`;
+  h += `<div class="di-note">Showing one-off items only. Recurring items (e.g. Salary, Rent) update automatically — manage them in the “Full view”. The summary above still reflects the full week.</div>`;
   h += `<div class="di-group"><div class="di-group-title">Income (one-off)</div>`;
   h += inc.length ? inc.map(r=>diRow('positives', r, w.id)).join('') : `<div class="di-empty">No one-off income this week.</div>`;
   h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'INFLOW'})">+ Add income</button>`;
@@ -439,8 +437,14 @@ function render(){
                 :            {c:'tag--oneoff', t:'One-off'};
       tagHTML += `<span class="tag ${cat.c}">${cat.t}</span> `;
     }
+    let btns = '';
+    if(!r.isAdjustment && !r.locked){
+      // Le carte non sono ricorrenti: niente icona ricorrenza (calendario).
+      if(!r.isCard) btns += `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> `;
+      btns += `<button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`;
+    }
     let row = `<tr class="${trClass}">`;
-    row += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tagHTML}${(!r.isAdjustment && !r.locked) ? `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`:''}</div></td>`;
+    row += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tagHTML}${btns}</div></td>`;
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
@@ -564,7 +568,13 @@ function deleteRow(section,rowId){
   const group = model[section];
   const row = group.find(r=>r.id===rowId);
   if(!row || row.locked || row.isAdjustment) return;
-  const idx = group.findIndex(r=>r.id===rowId); group.splice(idx,1);
+  askConfirm('Remove item', `Remove “${row.name}”? This can’t be undone.`, 'Delete', ()=> doDeleteRow(section, rowId));
+}
+function doDeleteRow(section,rowId){
+  const group = model[section];
+  const idx = group.findIndex(r=>r.id===rowId); if(idx<0) return;
+  const row = group[idx]; if(row.locked || row.isAdjustment) return;
+  group.splice(idx,1);
   save(model); render();
 }
 function editRecurrence(section,rowId){
@@ -585,8 +595,27 @@ function showInfo(title, body){
 function closeInfoModal(){ infoModal.classList.remove('show'); }
 document.getElementById('infoModalOk').addEventListener('click', closeInfoModal);
 document.getElementById('infoModalOverlay').addEventListener('click', closeInfoModal);
+
+// ===== Confirm modal (azioni distruttive, es. cancellazione) =====
+const confirmModal = document.getElementById('confirmModal');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmBody  = document.getElementById('confirmBody');
+const confirmOkBtn = document.getElementById('confirmOk');
+let confirmCb = null;
+function askConfirm(title, body, okLabel, cb){
+  confirmTitle.textContent = title;
+  confirmBody.textContent = body;
+  confirmOkBtn.textContent = okLabel || 'Confirm';
+  confirmCb = cb;
+  drawer.classList.remove('show');
+  confirmModal.classList.add('show');
+}
+function closeConfirm(){ confirmModal.classList.remove('show'); confirmCb = null; }
+confirmOkBtn.addEventListener('click', ()=>{ const cb = confirmCb; closeConfirm(); if(cb) cb(); });
+document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
+document.getElementById('confirmOverlay').addEventListener('click', closeConfirm);
 document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
-document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside “Cash-flow view and full data input”.'); });
+document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside the “Full view”.'); });
 // How-to guide modal
 const howtoModal = document.getElementById('howtoModal');
 function openHowto(){ drawer.classList.remove('show'); howtoModal.classList.add('show'); }
@@ -671,9 +700,6 @@ addOutflowBtn.addEventListener('click', ()=> openItemModal({mode:'add', type:'OU
 // Alerts actions
 eopInput.addEventListener('change', ()=>{ ui.eopThreshold = Number(eopInput.value||0); savePrefs(); render() });
 
-// Reset
-resetBtn.addEventListener('click', ()=>{ if(confirm('Replace current data with demo?')){ model=demo(); materialize(model); save(model); startInput.value=model.weeks[0].start; endInput.value=model.weeks[model.weeks.length-1].end; render() } });
-
 // Mobile quick actions
 mViewBtn.addEventListener('click', ()=>{
   const order=['WEEK','MONTH','QUARTER','YEAR'];
@@ -688,7 +714,6 @@ mCollapseBtn.addEventListener('click', ()=>{
 });
 mAddWeekBtn.addEventListener('click', ()=> addWeek());
 mPlus3Btn.addEventListener('click', ()=>{ for(let i=0;i<13;i++) addWeek() });
-mResetBtn.addEventListener('click', ()=>{ if(confirm('Replace current data with demo?')){ model=demo(); materialize(model); save(model); startInput.value=model.weeks[0].start; endInput.value=model.weeks[model.weeks.length-1].end; render() } });
 
 // ===== Modale "voce" (aggiunta / ricorrenza) =====
 const itemModal      = document.getElementById('itemModal');
@@ -771,8 +796,17 @@ function saveItemModal(){
     if(type==='INFLOW'){
       model.positives.push(row);
     } else {
-      const adjIdx = model.negatives.findIndex(r=>r.isAdjustment);
-      if(adjIdx>=0) model.negatives.splice(adjIdx,0,row); else model.negatives.push(row);
+      const negs = model.negatives;
+      if(row.isCard){
+        // tieni le carte adiacenti: inserisci dopo l'ultima carta esistente
+        let lastCard = -1;
+        negs.forEach((r,i)=>{ if(r.isCard) lastCard = i; });
+        if(lastCard>=0){ negs.splice(lastCard+1, 0, row); }
+        else { const adjIdx = negs.findIndex(r=>r.isAdjustment); if(adjIdx>=0) negs.splice(adjIdx,0,row); else negs.push(row); }
+      } else {
+        const adjIdx = negs.findIndex(r=>r.isAdjustment);
+        if(adjIdx>=0) negs.splice(adjIdx,0,row); else negs.push(row);
+      }
     }
   } else { // 'recur'
     const row = model[modalCtx.section].find(r=>r.id===modalCtx.rowId);
@@ -794,6 +828,7 @@ document.addEventListener('keydown', e=>{
   if(itemModal.classList.contains('show')) closeItemModal();
   if(infoModal.classList.contains('show')) closeInfoModal();
   if(howtoModal.classList.contains('show')) closeHowto();
+  if(confirmModal.classList.contains('show')) closeConfirm();
 });
 
 // Expose some funcs for inline handlers

@@ -82,8 +82,13 @@ thead tr.periods th{top:0}
 thead tr.weeks th{top:32px}
 thead th.sticky{text-align:left;left:0;z-index:3;position:sticky}
 tbody td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
-tbody td.sticky{position:sticky;left:0;background:inherit;z-index:2;text-align:left}
+/* La colonna etichette è sticky: deve avere SEMPRE sfondo opaco, altrimenti
+   gli importi scrollano sotto e si confondono (visibile su mobile). */
+tbody td.sticky{position:sticky;left:0;background:var(--panel);z-index:2;text-align:left}
 tbody tr.section td.sticky{background:var(--muted);font-weight:700}
+tbody tr.inflow-row td.sticky{background:var(--lightgreen)}
+tbody tr.outflow-row td.sticky{background:var(--lightred)}
+tbody tr.adjustment-row td.sticky{background:var(--lightgray)}
 tbody tr.section td{color:#6B7280}
 .section.inflows td.sticky{color:var(--green)}
 .section.outflows td.sticky{color:var(--red)}
@@ -176,6 +181,7 @@ body.authed .auth-screen{display:none}
 .field-hint{font-size:12px;color:var(--chip-text);background:var(--chip-bg);border-radius:8px;padding:8px 10px;margin:0}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
 .modal-actions button{padding:10px 18px;border-radius:10px}
+button.danger-btn{background:var(--red);border:none;color:#fff}
 
 /* Cella EoP editabile: leggero accento per distinguerla dalle altre */
 input.eop-cell{border-color:var(--accent);font-weight:600}

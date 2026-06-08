@@ -52,8 +52,8 @@
   <div class="toolbar">
     <div role="tablist" class="tablist" id="tablist">
       <button class="tab" role="tab" aria-selected="true" data-view="dashboard">Dashboard</button>
-      <button class="tab" role="tab" aria-selected="false" data-view="full">Cash-flow view and full data input</button>
       <button class="tab" role="tab" aria-selected="false" data-view="datainput">Weekly data updates</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="full">Full view (best on desktop)</button>
     </div>
     <div class="tabpanes">
       <!-- Date range (Dashboard + table view) + view controls and settings toggle (table view) -->
@@ -153,10 +153,6 @@
         EoP Alert&nbsp;<input id="eopThreshold" type="number" value="0" step="100" />
       </label>
     </div>
-    <div class="settings-group">
-      <span class="settings-label">Data</span>
-      <button class="ghost" id="resetBtn">Reset → Demo</button>
-    </div>
   </div>
 
   <div class="panel" id="gridPanel">
@@ -174,7 +170,6 @@
   <button class="btn" id="mCollapseBtn">▦</button>
   <button class="btn" id="mAddWeekBtn">+W</button>
   <button class="btn" id="mPlus3Btn">+3m</button>
-  <button class="btn" id="mResetBtn">Reset</button>
 </div>
 
 <!-- Modale: aggiunta voce / ricorrenza (sostituisce i prompt nativi) -->
@@ -238,17 +233,30 @@
   </div>
 </div>
 
+<!-- Modale di conferma (es. cancellazione riga) -->
+<div class="modal" id="confirmModal">
+  <div class="modal-overlay" id="confirmOverlay"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <h2 id="confirmTitle">Confirm</h2>
+    <p id="confirmBody" style="margin:0 0 16px 0"></p>
+    <div class="modal-actions">
+      <button class="ghost" id="confirmCancel" type="button">Cancel</button>
+      <button class="primary danger-btn" id="confirmOk" type="button">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modale guida (How to) -->
 <div class="modal" id="howtoModal">
   <div class="modal-overlay" id="howtoOverlay"></div>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
     <h2 id="howtoTitle">How to use My cash-flow</h2>
     <div class="howto-body">
-      <h3>The two views</h3>
+      <h3>The three views</h3>
       <ul>
         <li><strong>Dashboard</strong> — choose the date range and read the summary KPIs: Final EoP, Running Savings and low-balance Alerts.</li>
-        <li><strong>Cash-flow view and full data input</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
         <li><strong>Weekly data updates</strong> — a fast, mobile-friendly screen to update one week at a time (one-off income/expenses, credit-card charges and the actual end-of-week cash).</li>
+        <li><strong>Full view (best on desktop)</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
       </ul>
       <h3>Add income &amp; expenses</h3>
       <ul>
