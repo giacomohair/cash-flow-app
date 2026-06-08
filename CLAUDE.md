@@ -83,8 +83,9 @@ Cassa a fine periodo=EOP · Rettifica=Adjustment · Carte di credito=righe OUTFL
 
 ## Stato deploy (vivo)
 Produzione: https://cash-flow-app-eight.vercel.app (Vercel, auto-deploy su push a `main`).
-UI a 2 viste: "Dashboard" (date + KPI) e "Cash-flow view and data input" (tabella +
-pannello Settings). Nome app mostrato: "My cash-flow". Nuovi utenti partono da
+UI a 3 viste: "Dashboard" (date + KPI + grafici), "Cash-flow view and full data input"
+(tabella + pannello Settings raggruppato) e "Weekly data input" (inserimento settimana per
+settimana, mobile). Nome app mostrato: "My cash-flow". Nuovi utenti partono da
 `emptyModel()` (nessuna voce, solo Savings/Adjustment). "Confirm email" disattivato per
 i test.
 

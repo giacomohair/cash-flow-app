@@ -246,6 +246,69 @@ function chartSVG(values, weekLabels, opts={}){
   return s;
 }
 
+// ===== Data input (inserimento rapido settimana per settimana, mobile-friendly) =====
+let diWeekId = null;
+function currentWeekId(){
+  const today = iso(new Date());
+  const w = model.weeks.find(w => today>=w.start && today<=w.end);
+  return w ? w.id : (model.weeks[0] ? model.weeks[0].id : null);
+}
+function diRow(section, r, wid){
+  const v = Number(r.values[wid]||0);
+  const lockTag = r.locked ? ' <span class="tag">Locked</span>' : '';
+  const del = (!r.locked && !r.isAdjustment)
+    ? `<button class="iconbtn di-del" title="Remove this item" onclick="deleteRow('${section}','${r.id}')">🗑️</button>` : '';
+  return `<div class="di-row">
+    <label class="di-name">${r.name}${lockTag}</label>
+    <span class="di-controls">
+      <input class="di-input" type="number" inputmode="decimal" value="${v}" onblur="editCell('${section}','${r.id}','${wid}', this.value)">
+      ${del}
+    </span>
+  </div>`;
+}
+function renderDataInput(tWeek){
+  const el = document.getElementById('dataInput'); if(!el) return;
+  if(!model.weeks.length){ el.innerHTML = '<p style="opacity:.7">No weeks in the current horizon. Set a date range in Dashboard.</p>'; return; }
+  if(!diWeekId || !model.weeks.some(w=>w.id===diWeekId)) diWeekId = currentWeekId();
+  const idx = model.weeks.findIndex(w=>w.id===diWeekId);
+  const w = model.weeks[idx];
+  const t = tWeek[w.id];
+  const dLabel = new Date(w.start).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const exp = model.negatives.filter(r=>!r.isAdjustment);
+  let h = '';
+  h += `<div class="di-nav">
+    <button class="ghost" onclick="diStep(-1)" ${idx<=0?'disabled':''}>‹ Prev</button>
+    <div class="di-week"><div class="di-week-top">Week of</div><div class="di-week-date">${dLabel}</div></div>
+    <button class="ghost" onclick="diStep(1)" ${idx>=model.weeks.length-1?'disabled':''}>Next ›</button>
+  </div>`;
+  h += `<div class="di-summary">
+    <span>BoP<b>${fmt(t.bop)}</b></span>
+    <span>Net<b>${fmt(t.net)}</b></span>
+    <span>EoP<b>${fmt(t.eop)}</b></span>
+  </div>`;
+  h += `<div class="di-group"><div class="di-group-title">Income</div>`;
+  h += model.positives.length ? model.positives.map(r=>diRow('positives', r, w.id)).join('') : `<div class="di-empty">No income items yet.</div>`;
+  h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'INFLOW'})">+ Add income</button>`;
+  h += `</div>`;
+  h += `<div class="di-group"><div class="di-group-title">Expenses</div>`;
+  h += exp.length ? exp.map(r=>diRow('negatives', r, w.id)).join('') : `<div class="di-empty">No expense items yet.</div>`;
+  h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'OUTFLOW'})">+ Add expense</button>`;
+  h += `</div>`;
+  h += `<div class="di-group"><div class="di-group-title">Actual cash at end of week</div>
+    <div class="di-eoprow">
+      <label class="di-name">Actual cash now (EoP)</label>
+      <input class="di-input di-eop" type="number" inputmode="decimal" value="${t.eop}" onblur="editEop('${w.id}', this.value)">
+    </div>
+    <div class="di-hint">Typing here adjusts the Adjustment row so the balance matches your real cash.</div>
+  </div>`;
+  el.innerHTML = h;
+}
+function diStep(delta){
+  const i = model.weeks.findIndex(w=>w.id===diWeekId);
+  const j = i + delta;
+  if(j>=0 && j<model.weeks.length){ diWeekId = model.weeks[j].id; render(); }
+}
+
 // ===== Render =====
 function render(){
   const tWeek = totalsByWeek(model);
@@ -270,6 +333,9 @@ function render(){
   const savChartEl = document.getElementById('savChart');
   if(eopChartEl) eopChartEl.innerHTML = chartSVG(eopSeries, wkLabels, {lineColor:'#0F172A', threshold:thr});
   if(savChartEl) savChartEl.innerHTML = chartSVG(savSeries, wkLabels, {lineColor:'#0f766e'});
+
+  // Data input view (week-by-week)
+  renderDataInput(tWeek);
 
   // Table
   let html = "";
@@ -308,7 +374,7 @@ function render(){
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
-        html += `<td><input class="cell" type="number" value="${agg}" disabled title="Expand period to edit weeks"></td>`;
+        html += `<td class="agg-cell" title="Collapsed total — click ▶ on the period header to expand and enter weekly values"><input class="cell" type="number" value="${agg}" disabled></td>`;
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
@@ -330,7 +396,7 @@ function render(){
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
-        html += `<td><input class="cell" type="number" value="${agg}" disabled title="Expand period to edit weeks"></td>`;
+        html += `<td class="agg-cell" title="Collapsed total — click ▶ on the period header to expand and enter weekly values"><input class="cell" type="number" value="${agg}" disabled></td>`;
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
@@ -458,7 +524,7 @@ function closeInfoModal(){ infoModal.classList.remove('show'); }
 document.getElementById('infoModalOk').addEventListener('click', closeInfoModal);
 document.getElementById('infoModalOverlay').addEventListener('click', closeInfoModal);
 document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
-document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside “Cash-flow view and data input”.'); });
+document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside “Cash-flow view and full data input”.'); });
 // How-to guide modal
 const howtoModal = document.getElementById('howtoModal');
 function openHowto(){ drawer.classList.remove('show'); howtoModal.classList.add('show'); }
@@ -483,7 +549,7 @@ function addWeek(){
 }
 
 // Bind view navigation (Dashboard / Full cash-flow view / Settings)
-const VIEWS = ['dashboard','full'];
+const VIEWS = ['dashboard','full','datainput'];
 function setView(view){
   if(!VIEWS.includes(view)) view = 'dashboard';
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
@@ -666,7 +732,9 @@ window.togglePeriod = togglePeriod;
 window.editCell = editCell;
 window.editEop = editEop;
 window.deleteRow = deleteRow;
+window.diStep = diStep;
 window.editRecurrence = editRecurrence;
+window.openItemModal = openItemModal;
 
 // ===== Bootstrap (async: carica da storage, poi inizializza UI e render) =====
 async function init(){

@@ -52,7 +52,8 @@
   <div class="toolbar">
     <div role="tablist" class="tablist" id="tablist">
       <button class="tab" role="tab" aria-selected="true" data-view="dashboard">Dashboard</button>
-      <button class="tab" role="tab" aria-selected="false" data-view="full">Cash-flow view and data input</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="full">Cash-flow view and full data input</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="datainput">Weekly data input</button>
     </div>
     <div class="tabpanes">
       <!-- Date range: shown in Dashboard and Full cash-flow view -->
@@ -163,6 +164,9 @@
     <table id="grid"></table>
   </div>
   <p id="gridTip" style="opacity:.7;font-size:12px">Tip: Click a period header (▼/▶) to expand/compact. Aggregated cells are read‑only; expand to edit week values.</p>
+
+  <!-- Data input: quick week-by-week entry (mobile-friendly) -->
+  <div id="dataInput"></div>
 </div>
 
 <!-- Mobile quick actions -->
@@ -239,7 +243,8 @@
       <h3>The two views</h3>
       <ul>
         <li><strong>Dashboard</strong> — choose the date range and read the summary KPIs: Final EoP, Running Savings and low-balance Alerts.</li>
-        <li><strong>Cash-flow view and data input</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
+        <li><strong>Cash-flow view and full data input</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
+        <li><strong>Weekly data input</strong> — a fast, mobile-friendly screen to enter one week at a time (income, expenses and the actual end-of-week cash).</li>
       </ul>
       <h3>Add income &amp; expenses</h3>
       <ul>

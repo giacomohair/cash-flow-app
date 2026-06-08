@@ -26,13 +26,16 @@ h1{margin:0;font-size:18px;letter-spacing:.2px}
 /* Date range: visibile in Dashboard e Full view */
 body.view-dashboard #dateBar,
 body.view-full #dateBar{display:flex}
-/* KPI e grafici solo in Dashboard; tabella e pannello Settings solo in Full view */
+/* KPI e grafici solo in Dashboard */
 body:not(.view-dashboard) .cards,
 body:not(.view-dashboard) #charts{display:none}
-body.view-dashboard #gridPanel,
-body.view-dashboard #gridTip{display:none}
-/* Il pulsante Settings (sulla riga date) è solo nella vista tabella */
-body.view-dashboard #settingsToggle{display:none}
+/* Tabella e pulsante Settings solo nella vista tabella (full) */
+body:not(.view-full) #gridPanel,
+body:not(.view-full) #gridTip,
+body:not(.view-full) #settingsToggle{display:none}
+/* Vista Data input */
+#dataInput{display:none}
+body.view-datainput #dataInput{display:block}
 
 /* Grafici temporali (Dashboard) */
 #charts{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px}
@@ -169,6 +172,31 @@ input.eop-cell.danger{color:var(--red)}
 .howto-body ul{margin:0;padding-left:18px}
 .howto-body li{margin-bottom:6px;font-size:13px;line-height:1.5}
 
+/* Celle aggregate (periodo compresso): segnala al passaggio del mouse che vanno espanse */
+td.agg-cell{cursor:help}
+td.agg-cell input[disabled]{pointer-events:none}
+
+/* Vista Data input (inserimento settimanale, mobile-first) */
+#dataInput{max-width:560px;margin:0 auto}
+.di-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.di-week{text-align:center}
+.di-week-top{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:#6B7280}
+.di-week-date{font-size:16px;font-weight:700}
+.di-summary{display:flex;justify-content:space-around;gap:8px;background:var(--muted);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:14px;font-size:12px;color:#6B7280;text-align:center}
+.di-summary b{display:block;font-size:15px;color:var(--text);margin-top:2px}
+.di-group{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.di-group-title{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:#6B7280;font-weight:700;margin-bottom:6px}
+.di-row,.di-eoprow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.di-group .di-row:last-child,.di-eoprow{border-bottom:none}
+.di-name{font-size:15px}
+.di-controls{display:flex;align-items:center;gap:8px}
+.di-del{flex:0 0 auto}
+.di-add{margin-top:10px}
+.di-input{width:130px;text-align:right;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:#fff}
+.di-input.di-eop{border-color:var(--accent);font-weight:600}
+.di-empty{font-size:13px;opacity:.7;padding:4px 0}
+.di-hint{font-size:12px;opacity:.7;margin-top:8px}
+
 @media (max-width: 980px){
   /* Pulsanti icona più grandi al tatto */
   .iconbtn{padding:7px 11px;font-size:16px}
@@ -178,5 +206,6 @@ input.eop-cell.danger{color:var(--red)}
   /* Input ≥16px: evita lo zoom automatico di iOS al focus */
   .auth-form input,
   .modal-card input,
-  .modal-card select{font-size:16px}
+  .modal-card select,
+  .di-input{font-size:16px}
 }
