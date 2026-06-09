@@ -8,6 +8,7 @@ start/end of each week. Aggregable by week / month / quarter / year.
 
 ## Features
 
+- **How to** — a visual timeline of the typical workflow (set up once, then a quick weekly update).
 - **Dashboard** — date range, summary KPIs (Final EoP, Running Savings, low-balance Alerts) and time charts.
 - **Weekly data updates** — a fast, mobile-friendly screen to update one week at a time (one-off items + credit-card charges).
 - **Full view (best on desktop)** — the full expandable table, with a collapsible

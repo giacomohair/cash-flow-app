@@ -51,7 +51,8 @@
   <!-- View navigation -->
   <div class="toolbar">
     <div role="tablist" class="tablist" id="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-view="dashboard">Dashboard</button>
+      <button class="tab" role="tab" aria-selected="true" data-view="howto">How to</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="dashboard">Dashboard</button>
       <button class="tab" role="tab" aria-selected="false" data-view="datainput">Weekly data updates</button>
       <button class="tab" role="tab" aria-selected="false" data-view="full">Full view (best on desktop)</button>
     </div>
@@ -62,16 +63,12 @@
         <label title="End date (snaps to Sunday)">End&nbsp;<input id="endDate" type="date"></label>
         <button class="ghost" id="applyDatesBtn">Apply dates</button>
         <span id="viewControls" class="view-controls">
-          <label title="Group the table by week, month, quarter or year">View&nbsp;
-            <select id="granSel">
-              <option value="WEEK">Weeks</option>
-              <option value="MONTH" selected>Months</option>
-              <option value="QUARTER">Quarters</option>
-              <option value="YEAR">Years</option>
-            </select>
-          </label>
-          <button class="ghost" id="collapseAllBtn">Collapse all</button>
-          <button class="ghost" id="expandAllBtn">Expand all</button>
+          <span class="seg" id="granSeg" role="tablist" aria-label="Zoom level">
+            <button class="seg-btn" type="button" data-gran="WEEK" role="tab">Weeks</button>
+            <button class="seg-btn" type="button" data-gran="MONTH" role="tab">Months</button>
+            <button class="seg-btn" type="button" data-gran="QUARTER" role="tab">Quarters</button>
+            <button class="seg-btn" type="button" data-gran="YEAR" role="tab">Years</button>
+          </span>
         </span>
         <button class="ghost" id="settingsToggle" aria-expanded="false" title="Show/hide settings for the table below">⚙️ Settings ▾</button>
       </div>
@@ -95,6 +92,60 @@
 </div>
 
 <div class="wrap">
+
+  <!-- How to: visual workflow timeline (first view) -->
+  <div id="howto">
+    <h2 class="howto-h">How to use My cash-flow</h2>
+    <p class="howto-sub">Your routine in a glance — set it up once, then a 2‑minute update each week.</p>
+    <div class="tl">
+      <div class="tl-step setup">
+        <div class="tl-mark">🚀</div>
+        <div class="tl-card">
+          <div class="tl-when">Once · to start</div>
+          <h3>Set things up</h3>
+          <p>Add your recurring income &amp; expenses and your credit cards, set the alert threshold, and enter your starting cash.</p>
+          <button class="primary" type="button" onclick="gotoView('full')">Open Full view →</button>
+        </div>
+      </div>
+
+      <div class="tl-rep">🔁 Then, every week</div>
+
+      <div class="tl-step">
+        <div class="tl-mark">1</div>
+        <div class="tl-card">
+          <div class="tl-when">In “Weekly data updates”</div>
+          <h3>💳 Update your credit cards</h3>
+          <p>For each card, enter the amount and the week it will be charged, then tap <em>Post</em>.</p>
+        </div>
+      </div>
+      <div class="tl-step">
+        <div class="tl-mark">2</div>
+        <div class="tl-card">
+          <div class="tl-when">In “Weekly data updates”</div>
+          <h3>💶 Enter your real cash</h3>
+          <p>Type <strong>“Actual cash now (EoP)”</strong>: the forecast realigns to your true balance automatically.</p>
+        </div>
+      </div>
+      <div class="tl-step">
+        <div class="tl-mark">3</div>
+        <div class="tl-card">
+          <div class="tl-when">In “Weekly data updates”</div>
+          <h3>🧾 Add one-off items</h3>
+          <p>Log any extra expense or income that happened this week. Recurring items are already there.</p>
+        </div>
+      </div>
+      <div class="tl-step">
+        <div class="tl-mark">📊</div>
+        <div class="tl-card">
+          <div class="tl-when">In “Dashboard”</div>
+          <h3>Check your forecast</h3>
+          <p>KPIs and charts show where your cash is heading and any week below your alert.</p>
+          <button class="primary" type="button" onclick="gotoView('datainput')">Start this week’s update →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="cards">
     <div class="card">
       <h3>Final EoP (End of Period)</h3>
@@ -166,10 +217,8 @@
 
 <!-- Mobile quick actions -->
 <div class="mobilebar">
-  <button class="btn" id="mViewBtn">View: <span id="mViewLabel">Months</span></button>
-  <button class="btn" id="mCollapseBtn">▦</button>
-  <button class="btn" id="mAddWeekBtn">+W</button>
-  <button class="btn" id="mPlus3Btn">+3m</button>
+  <button class="btn" id="mAddWeekBtn">+ Week</button>
+  <button class="btn" id="mPlus3Btn">+ 3 months</button>
 </div>
 
 <!-- Modale: aggiunta voce / ricorrenza (sostituisce i prompt nativi) -->
@@ -258,6 +307,9 @@
         <li><strong>Weekly data updates</strong> — a fast, mobile-friendly screen to update one week at a time (one-off income/expenses, credit-card charges and the actual end-of-week cash).</li>
         <li><strong>Full view (best on desktop)</strong> — the full weekly table. The collapsible <strong>⚙️ Settings</strong> panel holds grouping, horizon, items, alerts and reset, applied to the table below.</li>
       </ul>
+
+      <p class="howto-lead">For the step-by-step weekly routine, see the <strong>“How to”</strong> tab.</p>
+
       <h3>Add income &amp; expenses</h3>
       <ul>
         <li>In Settings use <strong>+ Inflow</strong> / <strong>+ Outflow</strong>. Turn on <strong>Recurring</strong> to repeat automatically (weekly, every 2 weeks, monthly, or custom). Outflows are stored as negative automatically.</li>
@@ -272,7 +324,7 @@
       <h3>Alerts &amp; grouping</h3>
       <ul>
         <li>Set an <strong>EoP Alert</strong> threshold; weeks whose EoP falls below it turn red.</li>
-        <li>Switch grouping (Weeks / Months / Quarters / Years) and collapse/expand periods to zoom in or out.</li>
+        <li>Use the <strong>Weeks / Months / Quarters / Years</strong> zoom control; at month/quarter/year level tap a period header to expand it into weeks.</li>
       </ul>
       <h3>Your data</h3>
       <ul>

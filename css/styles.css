@@ -26,6 +26,9 @@ h1{margin:0;font-size:18px;letter-spacing:.2px}
 /* Date range: visibile in Dashboard e Full view */
 body.view-dashboard #dateBar,
 body.view-full #dateBar{display:flex}
+/* Vista How to (timeline) */
+#howto{display:none}
+body.view-howto #howto{display:block}
 /* KPI e grafici solo in Dashboard */
 body:not(.view-dashboard) .cards,
 body:not(.view-dashboard) #charts{display:none}
@@ -35,6 +38,15 @@ body:not(.view-full) #gridTip,
 body:not(.view-full) #viewControls,
 body:not(.view-full) #settingsToggle{display:none}
 .view-controls{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px}
+/* Segmented control per il livello di zoom (Weeks/Months/Quarters/Years) */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+.seg-btn{border:none;background:transparent;padding:8px 14px;cursor:pointer;color:inherit;border-radius:0;font:inherit;white-space:nowrap}
+.seg-btn + .seg-btn{border-left:1px solid var(--line)}
+.seg-btn[aria-selected="true"]{background:linear-gradient(180deg,var(--accent),var(--accent-700));color:#fff}
+/* Intestazione di periodo cliccabile (tap per espandere/comprimere) */
+thead th.period-th{cursor:pointer;user-select:none}
+thead th.period-th:hover{background:#e9ebef}
+.period-th .chev{display:inline-block;color:var(--accent);font-size:11px;margin-right:3px;vertical-align:middle}
 /* Vista Data input */
 #dataInput{display:none}
 body.view-datainput #dataInput{display:block}
@@ -89,7 +101,7 @@ tbody tr.section td.sticky{background:var(--muted);font-weight:700}
 tbody tr.inflow-row td.sticky{background:var(--lightgreen)}
 tbody tr.outflow-row td.sticky{background:var(--lightred)}
 tbody tr.adjustment-row td.sticky{background:var(--lightgray)}
-tbody tr.section td{color:#6B7280}
+tbody tr.section td{color:#6B7280;background:var(--muted)}
 .section.inflows td.sticky{color:var(--green)}
 .section.outflows td.sticky{color:var(--red)}
 .section.balances td.sticky{color:#0F172A}
@@ -187,11 +199,29 @@ button.danger-btn{background:var(--red);border:none;color:#fff}
 input.eop-cell{border-color:var(--accent);font-weight:600}
 input.eop-cell.danger{color:var(--red)}
 
+/* Vista How to — timeline grafica del flusso di lavoro */
+#howto{max-width:680px;margin:0 auto}
+.howto-h{margin:4px 0 2px;font-size:20px}
+.howto-sub{margin:0 0 16px;opacity:.7;font-size:13px}
+.tl{position:relative;display:flex;flex-direction:column;gap:14px;padding-left:6px}
+.tl::before{content:'';position:absolute;left:24px;top:10px;bottom:10px;width:2px;background:var(--line);z-index:0}
+.tl-step{position:relative;display:flex;gap:14px;align-items:flex-start;z-index:1}
+.tl-mark{flex:0 0 38px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--chip-bg);color:var(--chip-text);border:1px solid var(--line)}
+.tl-step.setup .tl-mark{background:linear-gradient(180deg,var(--accent),var(--accent-700));color:#fff;border:none}
+.tl-card{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.tl-card h3{margin:2px 0 4px;font-size:15px}
+.tl-card p{margin:0 0 10px;font-size:13px;opacity:.85;line-height:1.5}
+.tl-card p:last-child{margin-bottom:0}
+.tl-card .primary{padding:8px 14px;border-radius:10px}
+.tl-when{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--chip-text);font-weight:700}
+.tl-rep{font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin:2px 0 2px 52px}
+
 /* Corpo della guida How-to */
 .howto-body{max-height:60vh;overflow:auto}
 .howto-body h3{margin:14px 0 6px 0;font-size:14px}
 .howto-body ul{margin:0;padding-left:18px}
 .howto-body li{margin-bottom:6px;font-size:13px;line-height:1.5}
+.howto-lead{margin:8px 0 4px 0;font-size:13px;line-height:1.5}
 
 /* Celle aggregate (periodo compresso): segnala al passaggio del mouse che vanno espanse */
 td.agg-cell{cursor:help}

@@ -137,10 +137,8 @@ const cardEop=document.getElementById('cardEop');
 const startInput=document.getElementById('startDate');
 const endInput=document.getElementById('endDate');
 const applyDatesBtn=document.getElementById('applyDatesBtn');
-const granSel=document.getElementById('granSel');
+const granSeg=document.getElementById('granSeg');
 const eopInput=document.getElementById('eopThreshold');
-const collapseAllBtn=document.getElementById('collapseAllBtn');
-const expandAllBtn=document.getElementById('expandAllBtn');
 const plus3mBtn=document.getElementById('plus3mBtn');
 const plus6mBtn=document.getElementById('plus6mBtn');
 const addInflowBtn=document.getElementById('addInflowBtn');
@@ -148,9 +146,6 @@ const addOutflowBtn=document.getElementById('addOutflowBtn');
 const addWeekBtn=document.getElementById('addWeekBtn');
 
 // Mobile
-const mViewBtn=document.getElementById('mViewBtn');
-const mViewLabel=document.getElementById('mViewLabel');
-const mCollapseBtn=document.getElementById('mCollapseBtn');
 const mAddWeekBtn=document.getElementById('mAddWeekBtn');
 const mPlus3Btn=document.getElementById('mPlus3Btn');
 
@@ -380,26 +375,34 @@ function render(){
   html += '<thead>';
   html += '<tr class="periods">';
   html += '<th class="sticky">Item / Period</th>';
+  const togglable = ui.gran !== 'WEEK';  // alla granularità settimanale non c'è nulla da espandere
   for(const p of periods){
     const collapsed = !!ui.collapsed[p.id];
     const span = collapsed? 1 : p.weeks.length;
-    html += `<th colspan="${span}"><span class="toggle" onclick="togglePeriod('${p.id}')">${collapsed?'▶':'▼'}</span> ${p.label}</th>`;
-  }
-  html += '</tr>';
-
-  html += '<tr class="weeks">';
-  html += '<th class="sticky"></th>';
-  for(const p of periods){
-    if(ui.collapsed[p.id]){
-      html += `<th>Σ</th>`;
+    if(togglable){
+      html += `<th colspan="${span}" class="period-th" onclick="togglePeriod('${p.id}')" title="${collapsed?'Tap to expand into weeks':'Tap to collapse'}"><span class="chev">${collapsed?'▸':'▾'}</span> ${p.label}</th>`;
     } else {
-      for(const wid of p.weeks){
-        const lbl = weekLabelById(wid);
-        html += `<th>${lbl}</th>`;
-      }
+      html += `<th colspan="${span}">${p.label}</th>`;
     }
   }
   html += '</tr>';
+
+  // Seconda riga (date settimana) solo se serve: cioè quando un periodo raggruppato è
+  // espanso, per etichettare le colonne-settimana. Niente riga duplicata a livello Week,
+  // niente simboli Σ sotto i periodi compressi.
+  const anyExpanded = togglable && periods.some(p=> !ui.collapsed[p.id] && p.weeks.length>1);
+  if(anyExpanded){
+    html += '<tr class="weeks">';
+    html += '<th class="sticky"></th>';
+    for(const p of periods){
+      if(ui.collapsed[p.id]){
+        html += `<th></th>`;
+      } else {
+        for(const wid of p.weeks){ html += `<th>${weekLabelById(wid)}</th>`; }
+      }
+    }
+    html += '</tr>';
+  }
   html += '</thead>';
 
   // TBODY
@@ -407,7 +410,8 @@ function render(){
   html += `<tr class="section inflows"><td class="sticky">Inflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
   for(const r of model.positives){
     html += `<tr class="inflow-row">`;
-    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> <button class="iconbtn" title="Recurrence" onclick="editRecurrence('positives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('positives','${r.id}')">🗑️</button></div></td>`;
+    const inCat = r.recur ? {c:'tag--recurring', t:'Recurring'} : {c:'tag--oneoff', t:'One-off'};
+    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> <span class="tag ${inCat.c}">${inCat.t}</span> <button class="iconbtn" title="Recurrence" onclick="editRecurrence('positives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('positives','${r.id}')">🗑️</button></div></td>`;
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
@@ -625,10 +629,28 @@ document.getElementById('howtoOverlay').addEventListener('click', closeHowto);
 document.getElementById('menuHelp').addEventListener('click', e=>{ e.preventDefault(); openHowto(); });
 document.getElementById('headerHelpBtn').addEventListener('click', openHowto);
 
-// Drawer & period controls
+// Tap su un'intestazione di periodo: espande/comprime quel periodo
 function togglePeriod(pid){ ui.collapsed[pid] = !ui.collapsed[pid]; savePrefs(); render() }
-function collapseAll(){ const periods=buildPeriods(model, ui.gran); ui.collapsed={}; periods.forEach(p=>ui.collapsed[p.id]=true); savePrefs(); render() }
-function expandAll(){ ui.collapsed={}; savePrefs(); render() }
+// Imposta il livello di zoom (segmented control). Default sensato dei periodi:
+// a livello settimana tutto espanso (celle editabili); a livelli superiori tutto
+// compresso (overview a totali), poi si espande col tap.
+function setGran(g){
+  ui.gran = g;
+  if(g==='WEEK'){
+    ui.collapsed = {};
+  } else {
+    ui.collapsed = {};
+    buildPeriods(model, g).forEach(p=> ui.collapsed[p.id] = true);
+  }
+  savePrefs();
+  updateGranSeg();
+  render();
+}
+function updateGranSeg(){
+  for(const b of granSeg.querySelectorAll('.seg-btn')){
+    b.setAttribute('aria-selected', String(b.getAttribute('data-gran')===ui.gran));
+  }
+}
 
 // Horizon buttons
 function addWeek(){
@@ -639,19 +661,19 @@ function addWeek(){
   materialize(model); save(model); render();
 }
 
-// Bind view navigation (Dashboard / Full cash-flow view / Settings)
-const VIEWS = ['dashboard','full','datainput'];
+// Bind view navigation (How to / Dashboard / Weekly data updates / Full view)
+const VIEWS = ['howto','dashboard','datainput','full'];
 function setView(view){
-  if(!VIEWS.includes(view)) view = 'dashboard';
+  if(!VIEWS.includes(view)) view = 'howto';
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
   for(const v of VIEWS) document.body.classList.toggle('view-'+v, v===view);
 }
+function gotoView(view){ setView(view); window.scrollTo(0,0); }
 document.getElementById('tablist').addEventListener('click', (e)=>{
   if(!(e.target instanceof HTMLElement)) return;
   const b = e.target.closest('.tab'); if(!b) return;
   const view = b.getAttribute('data-view'); if(!view) return;
-  setView(view);
-  ui.activeView = view; savePrefs();
+  gotoView(view);
 });
 
 // Settings panel toggle (sulla riga delle date, nella vista tabella)
@@ -683,10 +705,12 @@ applyDatesBtn.addEventListener('click', ()=>{
   render();
 });
 
-// View actions
-granSel.addEventListener('change', ()=>{ ui.gran=granSel.value; ui.collapsed={}; savePrefs(); mViewLabel.textContent = (ui.gran==='WEEK'?'Weeks':ui.gran==='MONTH'?'Months':ui.gran==='QUARTER'?'Quarters':'Years'); render() });
-collapseAllBtn.addEventListener('click', collapseAll);
-expandAllBtn.addEventListener('click', expandAll);
+// View actions: segmented zoom level (Weeks/Months/Quarters/Years)
+granSeg.addEventListener('click', (e)=>{
+  const b = e.target.closest('.seg-btn'); if(!b) return;
+  const g = b.getAttribute('data-gran'); if(!g || g===ui.gran) return;
+  setGran(g);
+});
 
 // Horizon actions
 addWeekBtn.addEventListener('click', addWeek);
@@ -700,18 +724,7 @@ addOutflowBtn.addEventListener('click', ()=> openItemModal({mode:'add', type:'OU
 // Alerts actions
 eopInput.addEventListener('change', ()=>{ ui.eopThreshold = Number(eopInput.value||0); savePrefs(); render() });
 
-// Mobile quick actions
-mViewBtn.addEventListener('click', ()=>{
-  const order=['WEEK','MONTH','QUARTER','YEAR'];
-  const idx=order.indexOf(ui.gran); const next=order[(idx+1)%order.length];
-  ui.gran=next; savePrefs();
-  mViewLabel.textContent = (next==='WEEK'?'Weeks':next==='MONTH'?'Months':next==='QUARTER'?'Quarters':'Years');
-  render();
-});
-mCollapseBtn.addEventListener('click', ()=>{
-  const anyOpen = Object.values(ui.collapsed).some(v=>!v);
-  if(anyOpen){ collapseAll() } else { expandAll() }
-});
+// Mobile quick actions (solo crescita orizzonte)
 mAddWeekBtn.addEventListener('click', ()=> addWeek());
 mPlus3Btn.addEventListener('click', ()=>{ for(let i=0;i<13;i++) addWeek() });
 
@@ -833,6 +846,7 @@ document.addEventListener('keydown', e=>{
 
 // Expose some funcs for inline handlers
 window.togglePeriod = togglePeriod;
+window.gotoView = gotoView;
 window.editCell = editCell;
 window.editEop = editEop;
 window.deleteRow = deleteRow;
@@ -846,23 +860,23 @@ async function init(){
   const saved = await storage.load();
   model = saved.model || demo(); materialize(model); save(model);  // nuovi utenti: dati di esempio
 
-  ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',activeView:'dashboard'};
+  ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',seenHowto:false};
   if(!ui.gran) ui.gran='MONTH';
   if(!ui.collapsed) ui.collapsed={};
   if(typeof ui.eopThreshold!=='number') ui.eopThreshold=0;
-  if(!ui.activeView) ui.activeView='dashboard';
 
   // Initialize inputs to current model horizon
   if(model.weeks.length){
     startInput.value = model.weeks[0].start;
     endInput.value = model.weeks[model.weeks.length-1].end;
   }
-  granSel.value = ui.gran;
+  updateGranSeg();
   eopInput.value = ui.eopThreshold;
-  mViewLabel.textContent = (ui.gran==='WEEK'?'Weeks':ui.gran==='MONTH'?'Months':ui.gran==='QUARTER'?'Quarters':'Years');
 
-  // Restore active view
-  setView(ui.activeView || 'dashboard');
+  // Vista d'ingresso: la PRIMA volta "How to", poi sempre "Dashboard".
+  let landing = 'dashboard';
+  if(!ui.seenHowto){ landing = 'howto'; ui.seenHowto = true; savePrefs(); }
+  setView(landing);
 
   // Initial render
   render();
