@@ -136,23 +136,9 @@ th .toggle{cursor:pointer;color:#2563eb}
 .drawer .panel{position:absolute;top:0;left:0;height:100%;width:320px;background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto}
 .drawer .panel h2{margin:0 0 8px 0}
 .drawer a{display:block;padding:10px 8px;border-radius:8px;color:inherit;text-decoration:none;border:1px solid var(--line);margin-bottom:8px;background:#fff}
-/* Mobile bottom bar */
-.mobilebar{
-  position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--panel);
-  border-top:1px solid var(--line);display:none;gap:8px;justify-content:space-between;align-items:center;
-  padding:8px 12px;
-}
-.mobilebar .btn{
-  border:1px solid var(--line);background:#fff;padding:8px 10px;border-radius:10px;cursor:pointer;color:inherit;font-size:13px
-}
-.mobile-only{display:none}
 @media (max-width: 980px){
   .cards{grid-template-columns:1fr}
   input.cell{width:80px}
-  .mobilebar{display:flex}
-  .mobile-only{display:inline-block}
-  .desktop-only{display:none}
-  body{padding-bottom:58px}
 }
 /* Auth gate (Fase 2) */
 .auth-screen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:16px}
@@ -169,8 +155,7 @@ th .toggle{cursor:pointer;color:#2563eb}
 .auth-msg{color:#7c2d12;font-size:13px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:10px}
 /* L'app è nascosta finché non c'è una sessione; authScreen sparisce una volta dentro */
 body:not(.authed) header,
-body:not(.authed) .wrap,
-body:not(.authed) .mobilebar{display:none}
+body:not(.authed) .wrap{display:none}
 body.authed .auth-screen{display:none}
 
 /* Nomi riga, tag, pulsanti icona (📅 🗑️) — aree di tap più chiare su mobile */

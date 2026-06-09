@@ -145,9 +145,6 @@ const addInflowBtn=document.getElementById('addInflowBtn');
 const addOutflowBtn=document.getElementById('addOutflowBtn');
 const addWeekBtn=document.getElementById('addWeekBtn');
 
-// Mobile
-const mAddWeekBtn=document.getElementById('mAddWeekBtn');
-const mPlus3Btn=document.getElementById('mPlus3Btn');
 
 // Drawer
 const drawer=document.getElementById('drawer');
@@ -723,10 +720,6 @@ addOutflowBtn.addEventListener('click', ()=> openItemModal({mode:'add', type:'OU
 
 // Alerts actions
 eopInput.addEventListener('change', ()=>{ ui.eopThreshold = Number(eopInput.value||0); savePrefs(); render() });
-
-// Mobile quick actions (solo crescita orizzonte)
-mAddWeekBtn.addEventListener('click', ()=> addWeek());
-mPlus3Btn.addEventListener('click', ()=>{ for(let i=0;i<13;i++) addWeek() });
 
 // ===== Modale "voce" (aggiunta / ricorrenza) =====
 const itemModal      = document.getElementById('itemModal');
