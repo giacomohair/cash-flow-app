@@ -11,7 +11,7 @@ start/end of each week. Aggregable by week / month / quarter / year.
 - **How to** — a visual timeline of the typical workflow (set up once, then a quick weekly update).
 - **Dashboard** — date range, summary KPIs (Final EoP, Running Savings, low-balance Alerts) and time charts.
 - **Weekly data updates** — a fast, mobile-friendly screen to update one week at a time (one-off items + credit-card charges).
-- **Full view (best on desktop)** — the full expandable table, with a collapsible
+- **Full cash-flow view (best on desktop)** — the full expandable table, with a collapsible
   *Settings* panel (grouping, horizon, items, alerts, reset) applied to the table below.
 - Recurring or one-off inflows/outflows via a clear add/edit dialog.
 - Multi-user with email/password login; each user's data is **private** (Supabase Row Level Security).

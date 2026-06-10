@@ -309,7 +309,7 @@ function renderDataInput(tWeek){
     <span>Net<b>${fmt(t.net)}</b></span>
     <span>EoP<b>${fmt(t.eop)}</b></span>
   </div>`;
-  h += `<div class="di-note">Showing one-off items only. Recurring items (e.g. Salary, Rent) update automatically — manage them in the “Full view”. The summary above still reflects the full week.</div>`;
+  h += `<div class="di-note">Showing one-off items only. Recurring items (e.g. Salary, Rent) update automatically — manage them in the “Full cash-flow view”. The summary above still reflects the full week.</div>`;
   h += `<div class="di-group"><div class="di-group-title">Income (one-off)</div>`;
   h += inc.length ? inc.map(r=>diRow('positives', r, w.id)).join('') : `<div class="di-empty">No one-off income this week.</div>`;
   h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'INFLOW'})">+ Add income</button>`;
@@ -447,13 +447,21 @@ function showCallouts(rawItems){
   const host = document.getElementById('callouts'); if(!host) return;
   host.innerHTML = '';
   const items = [...rawItems].sort((a,b)=> LVL_RANK[a.level]-LVL_RANK[b.level]); // più gravi prima
-  items.slice(0,3).forEach((f,i)=>{
+  const shown = items.slice(0,3);
+  if(shown.length>=2){
+    const bar = document.createElement('div');
+    bar.className = 'co-bar';
+    bar.innerHTML = `<button class="co-dismiss-all" type="button">Dismiss all ✕</button>`;
+    bar.querySelector('button').addEventListener('click', ()=>{ host.innerHTML=''; });
+    host.appendChild(bar);
+  }
+  shown.forEach((f,i)=>{
     const div = document.createElement('div');
     div.className = `callout lvl-${f.level}`;
-    div.style.animationDelay = (i*90)+'ms';
+    div.style.animationDelay = (i*80)+'ms';
     div.innerHTML = `<span class="co-ic">${f.icon}</span><div class="co-body"><div class="co-title">${f.title}</div><div class="co-detail">${f.detail}</div><button class="co-link" onclick="gotoView('insights')">View insights →</button></div><button class="co-x" aria-label="Dismiss">×</button>`;
     div.querySelector('.co-x').addEventListener('click', ()=> div.remove());
-    setTimeout(()=>{ div.classList.add('leaving'); setTimeout(()=>div.remove(), 300); }, 9000 + i*600);
+    setTimeout(()=>{ div.classList.add('leaving'); setTimeout(()=>div.remove(), 300); }, 4000 + i*300);
     host.appendChild(div);
   });
   if(items.length>3){
@@ -745,7 +753,7 @@ confirmOkBtn.addEventListener('click', ()=>{ const cb = confirmCb; closeConfirm(
 document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
 document.getElementById('confirmOverlay').addEventListener('click', closeConfirm);
 document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
-document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside the “Full view”.'); });
+document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside the “Full cash-flow view”.'); });
 // How-to guide modal
 const howtoModal = document.getElementById('howtoModal');
 function openHowto(){ drawer.classList.remove('show'); howtoModal.classList.add('show'); }
@@ -787,7 +795,7 @@ function addWeek(){
   materialize(model); save(model); render();
 }
 
-// Bind view navigation (How to / Dashboard / Weekly data updates / Full view)
+// Bind view navigation (How to / Dashboard / Weekly data updates / Full cash-flow view)
 const VIEWS = ['howto','dashboard','insights','datainput','full'];
 function setView(view){
   if(!VIEWS.includes(view)) view = 'howto';

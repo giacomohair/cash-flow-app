@@ -83,13 +83,14 @@ Cassa a fine periodo=EOP · Rettifica=Adjustment · Carte di credito=righe OUTFL
 
 ## Stato deploy (vivo)
 Produzione: https://cash-flow-app-eight.vercel.app (Vercel, auto-deploy su push a `main`).
-UI a 4 viste (in quest'ordine): "How to" (data-view="howto", timeline grafica del flusso di
+UI a 5 viste (in quest'ordine): "How to" (data-view="howto", timeline grafica del flusso di
 lavoro; mostrata SOLO al primo accesso via flag prefs `seenHowto`, poi si entra sempre in
-Dashboard), "Dashboard" (date + KPI + grafici), "Weekly data updates"
+Dashboard), "Dashboard" (date + KPI + grafici), "Insights" (data-view="insights"; controlli
+deterministici raggruppati per temi + badge sul tab + call-out flottanti all'apertura),
+"Full cash-flow view (best on desktop)" — data-view="full" — (tabella; sulla riga date i
+controlli View segmented + tap-to-expand + toggle pannello Settings) e "Weekly data updates"
 (aggiornamento settimana per settimana, solo voci NON ricorrenti + sezione carte di credito;
-mobile) e "Full view (best on desktop)" — data-view="full" — (tabella; sulla riga date i
-controlli View segmented + tap-to-expand + toggle pannello Settings). Help (menu hamburger) =
-guida testuale di riferimento, distinta dalla vista How to. Nome app mostrato: "My cash-flow". Nuovi utenti partono da
+mobile). Help (menu hamburger) = guida testuale di riferimento, distinta dalla vista How to. Nome app mostrato: "My cash-flow". Nuovi utenti partono da
 `demo()` (dati di esempio, inclusa una carta di credito). `emptyModel()` resta disponibile
 ma non in uso. "Confirm email" disattivato per
 i test.
