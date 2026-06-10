@@ -338,8 +338,18 @@ function diStep(delta){
   if(j>=0 && j<model.weeks.length){ diWeekId = model.weeks[j].id; render(); }
 }
 
-// ===== Insights: controlli deterministici (nessuna AI) =====
+// ===== Insights: controlli deterministici (nessuna AI), organizzati per temi =====
 const LVL_RANK = { danger:0, warn:1, info:2 };
+const INS_THEMES = [
+  { key:'data',     label:'🧹 Data hygiene' },
+  { key:'health',   label:'📉 Financial health' },
+  { key:'coverage', label:'🔭 Forecast coverage' },
+];
+function median(nums){
+  if(!nums.length) return 0;
+  const s = [...nums].sort((a,b)=>a-b); const m = Math.floor(s.length/2);
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+}
 function computeInsights(){
   const out = [];
   if(!model.weeks.length) return out;
@@ -348,22 +358,41 @@ function computeInsights(){
   const weeks = model.weeks;
   const months = buildPeriods(model, 'MONTH');
 
-  // Rottura di cassa: EoP negativo
+  // --- Financial health ---
   const neg = weeks.find(w => tWeek[w.id].eop < 0);
-  if(neg) out.push({ level:'danger', icon:'🛑', title:'Cash goes negative', detail:`Around ${weekLabelById(neg.id)} your end-of-week cash drops below €0.`, view:'full' });
+  if(neg) out.push({ theme:'health', level:'danger', icon:'🛑', title:'Cash goes negative', detail:`Around ${weekLabelById(neg.id)} your end-of-week cash drops below €0.`, view:'full' });
 
-  // Settimane sotto la soglia di allerta
   const breach = weeks.filter(w => tWeek[w.id].eop < thr);
-  if(breach.length) out.push({ level:'warn', icon:'⚠️', title:`${breach.length} week${breach.length>1?'s':''} below your alert`, detail:`First: ${weekLabelById(breach[0].id)} at ${fmt(tWeek[breach[0].id].eop)} (threshold ${fmt(thr)}).`, view:'dashboard' });
+  if(breach.length) out.push({ theme:'health', level:'warn', icon:'⚠️', title:`${breach.length} week${breach.length>1?'s':''} below your alert`, detail:`First: ${weekLabelById(breach[0].id)} at ${fmt(tWeek[breach[0].id].eop)} (threshold ${fmt(thr)}).`, view:'dashboard' });
 
-  // Controlli per riga
+  // Spendi più di quanto entra nella maggioranza delle settimane
+  const negNet = weeks.filter(w => tWeek[w.id].net < 0).length;
+  if(weeks.length>=4 && negNet/weeks.length > 0.6) out.push({ theme:'health', level:'warn', icon:'📉', title:'You spend more than you earn', detail:`Net flow is negative in ${negNet} of ${weeks.length} weeks.`, view:'full' });
+
+  // Trend di cassa in calo lungo l'orizzonte
+  const startCash = tWeek[weeks[0].id].bop;
+  const endCash = tWeek[weeks[weeks.length-1].id].eop;
+  if(endCash < startCash) out.push({ theme:'health', level:'warn', icon:'↘️', title:'Cash is trending down', detail:`It falls ${fmt(startCash-endCash)} from start (${fmt(startCash)}) to end (${fmt(endCash)}) of the horizon.`, view:'dashboard' });
+
+  // --- Data hygiene (per riga) ---
   const rows = [...model.positives, ...model.negatives.filter(r=>!r.isAdjustment)];
   for(const r of rows){
     const vals = weeks.map(w => Number(r.values[w.id]||0));
     const nonZero = vals.filter(v => v!==0);
-    if(nonZero.length===0){ out.push({ level:'info', icon:'∅', title:`“${r.name}” is empty`, detail:'No amounts across the horizon — fill it in or remove it.', view:'full' }); continue; }
-    if(r.type==='INFLOW' && vals.some(v=>v<0)) out.push({ level:'warn', icon:'±', title:`“${r.name}” has negative income`, detail:'An income week is negative — check the sign.', view:'full' });
-    if(r.type==='OUTFLOW' && vals.some(v=>v>0)) out.push({ level:'warn', icon:'±', title:`“${r.name}” has a positive expense`, detail:'An expense week is positive — check the sign.', view:'full' });
+    if(nonZero.length===0){ out.push({ theme:'data', level:'info', icon:'∅', title:`“${r.name}” is empty`, detail:'No amounts across the horizon — fill it in or remove it.', view:'full' }); continue; }
+    if(r.type==='INFLOW' && vals.some(v=>v<0)) out.push({ theme:'data', level:'warn', icon:'±', title:`“${r.name}” has negative income`, detail:'An income week is negative — check the sign.', view:'full' });
+    if(r.type==='OUTFLOW' && vals.some(v=>v>0)) out.push({ theme:'data', level:'warn', icon:'±', title:`“${r.name}” has a positive expense`, detail:'An expense week is positive — check the sign.', view:'full' });
+
+    // Valore anomalo (outlier) rispetto alla mediana della riga
+    if(nonZero.length>=3){
+      const absVals = nonZero.map(Math.abs);
+      const med = median(absVals);
+      if(med>0){
+        const out1 = absVals.find(v => v > med*4);
+        if(out1!==undefined){ const wk = weeks.find(w=>Math.abs(Number(r.values[w.id]||0))===out1); out.push({ theme:'data', level:'warn', icon:'🔺', title:`“${r.name}” has an unusual amount`, detail:`${fmt(r.values[wk.id])} on ${weekLabelById(wk.id)} is far from its usual ${fmt(med)} — possible typo.`, view:'full' }); }
+      }
+    }
+
     // Voce NON ricorrente presente in molti mesi ma mancante in pochi (es. "Asilo")
     if(!r.recur && !r.isCard){
       const monthHas = months.map(p => ({ label:p.label, has: p.weeks.some(wid=>Number(r.values[wid]||0)!==0) }));
@@ -371,11 +400,23 @@ function computeInsights(){
       const missing = monthHas.filter(m=>!m.has);
       if(present>=3 && missing.length>0 && missing.length <= Math.max(1, Math.floor(monthHas.length*0.34))){
         const miss = missing.map(m=>m.label).slice(0,3).join(', ');
-        out.push({ level:'warn', icon:'🔎', title:`“${r.name}” may be missing in ${missing.length} month${missing.length>1?'s':''}`, detail:`Present in ${present} months but empty in ${miss}. Forgot to enter it?`, view:'full' });
+        out.push({ theme:'data', level:'warn', icon:'🔎', title:`“${r.name}” may be missing in ${missing.length} month${missing.length>1?'s':''}`, detail:`Present in ${present} months but empty in ${miss}. Forgot to enter it?`, view:'full' });
       }
     }
   }
-  out.sort((a,b)=> LVL_RANK[a.level]-LVL_RANK[b.level]);
+
+  // Nomi duplicati (entrate fra loro, uscite fra loro)
+  const dupCheck = (list, what) => {
+    const counts = {};
+    list.forEach(r => { if(r.isAdjustment) return; const k=(r.name||'').trim().toLowerCase(); if(!k) return; counts[k]=(counts[k]||0)+1; });
+    Object.keys(counts).filter(k=>counts[k]>1).forEach(k => out.push({ theme:'data', level:'info', icon:'⧉', title:`Duplicate ${what}`, detail:`“${k}” appears ${counts[k]} times — possible double entry.`, view:'full' }));
+  };
+  dupCheck(model.positives, 'income item');
+  dupCheck(model.negatives, 'expense item');
+
+  // --- Forecast coverage ---
+  if(thr===0) out.push({ theme:'coverage', level:'info', icon:'🔔', title:'No alert threshold set', detail:'Set an EoP Alert (in Settings) to be warned about low-cash weeks.', view:'full' });
+
   return out;
 }
 function insCard(f){
@@ -391,14 +432,21 @@ function renderInsights(items){
   if(badge){ if(items.length){ badge.textContent = String(items.length); badge.hidden = false; } else { badge.hidden = true; } }
   if(!items.length){
     el.innerHTML = `<h2 class="ins-h">Insights</h2><div class="ins-empty">✅ All good — no issues found in your numbers.</div>`;
-  } else {
-    el.innerHTML = `<h2 class="ins-h">Insights</h2><p class="ins-sub">Automatic checks on your cash-flow.</p>` + items.map(insCard).join('');
+    return;
   }
+  let html = `<h2 class="ins-h">Insights</h2><p class="ins-sub">Automatic checks on your cash-flow, grouped by theme.</p>`;
+  for(const t of INS_THEMES){
+    const group = items.filter(f=>f.theme===t.key).sort((a,b)=> LVL_RANK[a.level]-LVL_RANK[b.level]);
+    if(!group.length) continue;
+    html += `<div class="ins-theme"><h3 class="ins-theme-h">${t.label}<span class="ins-count">${group.length}</span></h3>${group.map(insCard).join('')}</div>`;
+  }
+  el.innerHTML = html;
 }
 // Call-out flottanti (mostrati all'apertura): i findings più importanti.
-function showCallouts(items){
+function showCallouts(rawItems){
   const host = document.getElementById('callouts'); if(!host) return;
   host.innerHTML = '';
+  const items = [...rawItems].sort((a,b)=> LVL_RANK[a.level]-LVL_RANK[b.level]); // più gravi prima
   items.slice(0,3).forEach((f,i)=>{
     const div = document.createElement('div');
     div.className = `callout lvl-${f.level}`;
