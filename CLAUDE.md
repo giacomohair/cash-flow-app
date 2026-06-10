@@ -111,6 +111,24 @@ i test.
 5. **OTP / login con codice via email** (rinviato in Fase 2.5): richiede lo stesso SMTP.
 6. **Opzionali**: dominio personalizzato; registrazione ristretta (uso familiare);
    rimuovere/spostare il prototipo `cashflow-forecaster-v6e.html` in `docs/`.
+7. **AI a supporto dell'utente** (in lavorazione, in ordine):
+   a) **Controlli deterministici** (nessuna AI): regole client-side che segnalano
+      incongruenze e spunti — voce non ricorrente mancante in alcuni mesi (es. "Asilo"
+      presente in 5 mesi su 6), riga vuota, segno anomalo (income negativo / spesa
+      positiva), EoP sotto soglia, EoP negativo (rottura di cassa). Mostrati sia come
+      **call-out/pop-up** (effetto) sia in una **vista "Insights"**.
+   b) **Consulente LLM** (Claude API): suggerimenti in linguaggio naturale + chatbot
+      "fai una domanda sui tuoi numeri". RICHIEDE backend: **Supabase Edge Function**
+      (la API key NON può stare nel frontend) che legge i dati via RLS e chiama Claude.
+      Opt-in (dati finanziari).
+8. **Integrazione bancaria (EoP reale)**: collegare il conto via aggregatore open-banking
+   PSD2 (es. GoCardless Bank Account Data/Nordigen) per impostare in automatico
+   l'"Actual cash now (EoP)". Richiede backend (Edge Functions), consenso PSD2
+   (ri-consenso ~90gg) e attenzione a sicurezza/retention. Il più pesante: resta in coda.
+
+> NOTA architetturale: 7b e 8 introducono un BACKEND (Supabase Edge Functions),
+> superando il vincolo attuale "solo frontend + client Supabase". Decisione consapevole
+> da prendere quando si parte con quei punti.
 
 ## Fatto di recente (oltre le Fasi 1-4)
 - Avvisi hamburger menu (Personal Area / Settings / Help) → modali in-app (`infoModal`).

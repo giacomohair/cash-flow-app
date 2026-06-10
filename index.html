@@ -53,6 +53,7 @@
     <div role="tablist" class="tablist" id="tablist">
       <button class="tab" role="tab" aria-selected="true" data-view="howto">How to</button>
       <button class="tab" role="tab" aria-selected="false" data-view="dashboard">Dashboard</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="insights">Insights<span class="tab-badge" id="insightsBadge" hidden></span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="datainput">Weekly data updates</button>
       <button class="tab" role="tab" aria-selected="false" data-view="full">Full view (best on desktop)</button>
     </div>
@@ -92,6 +93,9 @@
 </div>
 
 <div class="wrap">
+
+  <!-- Insights: automatic deterministic checks -->
+  <div id="insights"></div>
 
   <!-- How to: visual workflow timeline (first view) -->
   <div id="howto">
@@ -263,6 +267,9 @@
     </div>
   </div>
 </div>
+
+<!-- Call-out insights (pop-up flottanti, in alto a destra) -->
+<div id="callouts" aria-live="polite"></div>
 
 <!-- Modale informativo (voci del menu hamburger) -->
 <div class="modal" id="infoModal">

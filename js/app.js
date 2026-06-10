@@ -338,6 +338,84 @@ function diStep(delta){
   if(j>=0 && j<model.weeks.length){ diWeekId = model.weeks[j].id; render(); }
 }
 
+// ===== Insights: controlli deterministici (nessuna AI) =====
+const LVL_RANK = { danger:0, warn:1, info:2 };
+function computeInsights(){
+  const out = [];
+  if(!model.weeks.length) return out;
+  const tWeek = totalsByWeek(model);
+  const thr = Number(ui.eopThreshold||0);
+  const weeks = model.weeks;
+  const months = buildPeriods(model, 'MONTH');
+
+  // Rottura di cassa: EoP negativo
+  const neg = weeks.find(w => tWeek[w.id].eop < 0);
+  if(neg) out.push({ level:'danger', icon:'🛑', title:'Cash goes negative', detail:`Around ${weekLabelById(neg.id)} your end-of-week cash drops below €0.`, view:'full' });
+
+  // Settimane sotto la soglia di allerta
+  const breach = weeks.filter(w => tWeek[w.id].eop < thr);
+  if(breach.length) out.push({ level:'warn', icon:'⚠️', title:`${breach.length} week${breach.length>1?'s':''} below your alert`, detail:`First: ${weekLabelById(breach[0].id)} at ${fmt(tWeek[breach[0].id].eop)} (threshold ${fmt(thr)}).`, view:'dashboard' });
+
+  // Controlli per riga
+  const rows = [...model.positives, ...model.negatives.filter(r=>!r.isAdjustment)];
+  for(const r of rows){
+    const vals = weeks.map(w => Number(r.values[w.id]||0));
+    const nonZero = vals.filter(v => v!==0);
+    if(nonZero.length===0){ out.push({ level:'info', icon:'∅', title:`“${r.name}” is empty`, detail:'No amounts across the horizon — fill it in or remove it.', view:'full' }); continue; }
+    if(r.type==='INFLOW' && vals.some(v=>v<0)) out.push({ level:'warn', icon:'±', title:`“${r.name}” has negative income`, detail:'An income week is negative — check the sign.', view:'full' });
+    if(r.type==='OUTFLOW' && vals.some(v=>v>0)) out.push({ level:'warn', icon:'±', title:`“${r.name}” has a positive expense`, detail:'An expense week is positive — check the sign.', view:'full' });
+    // Voce NON ricorrente presente in molti mesi ma mancante in pochi (es. "Asilo")
+    if(!r.recur && !r.isCard){
+      const monthHas = months.map(p => ({ label:p.label, has: p.weeks.some(wid=>Number(r.values[wid]||0)!==0) }));
+      const present = monthHas.filter(m=>m.has).length;
+      const missing = monthHas.filter(m=>!m.has);
+      if(present>=3 && missing.length>0 && missing.length <= Math.max(1, Math.floor(monthHas.length*0.34))){
+        const miss = missing.map(m=>m.label).slice(0,3).join(', ');
+        out.push({ level:'warn', icon:'🔎', title:`“${r.name}” may be missing in ${missing.length} month${missing.length>1?'s':''}`, detail:`Present in ${present} months but empty in ${miss}. Forgot to enter it?`, view:'full' });
+      }
+    }
+  }
+  out.sort((a,b)=> LVL_RANK[a.level]-LVL_RANK[b.level]);
+  return out;
+}
+function insCard(f){
+  return `<div class="ins-card lvl-${f.level}">
+    <span class="ins-ic">${f.icon}</span>
+    <div class="ins-body"><div class="ins-title">${f.title}</div><div class="ins-detail">${f.detail}</div></div>
+    <button class="ghost ins-go" onclick="gotoView('${f.view}')">Open →</button>
+  </div>`;
+}
+function renderInsights(items){
+  const el = document.getElementById('insights'); if(!el) return;
+  const badge = document.getElementById('insightsBadge');
+  if(badge){ if(items.length){ badge.textContent = String(items.length); badge.hidden = false; } else { badge.hidden = true; } }
+  if(!items.length){
+    el.innerHTML = `<h2 class="ins-h">Insights</h2><div class="ins-empty">✅ All good — no issues found in your numbers.</div>`;
+  } else {
+    el.innerHTML = `<h2 class="ins-h">Insights</h2><p class="ins-sub">Automatic checks on your cash-flow.</p>` + items.map(insCard).join('');
+  }
+}
+// Call-out flottanti (mostrati all'apertura): i findings più importanti.
+function showCallouts(items){
+  const host = document.getElementById('callouts'); if(!host) return;
+  host.innerHTML = '';
+  items.slice(0,3).forEach((f,i)=>{
+    const div = document.createElement('div');
+    div.className = `callout lvl-${f.level}`;
+    div.style.animationDelay = (i*90)+'ms';
+    div.innerHTML = `<span class="co-ic">${f.icon}</span><div class="co-body"><div class="co-title">${f.title}</div><div class="co-detail">${f.detail}</div><button class="co-link" onclick="gotoView('insights')">View insights →</button></div><button class="co-x" aria-label="Dismiss">×</button>`;
+    div.querySelector('.co-x').addEventListener('click', ()=> div.remove());
+    setTimeout(()=>{ div.classList.add('leaving'); setTimeout(()=>div.remove(), 300); }, 9000 + i*600);
+    host.appendChild(div);
+  });
+  if(items.length>3){
+    const more = document.createElement('div');
+    more.className = 'callout lvl-info co-more';
+    more.innerHTML = `<div class="co-body"><button class="co-link" onclick="gotoView('insights')">+${items.length-3} more in Insights →</button></div>`;
+    host.appendChild(more);
+  }
+}
+
 // ===== Render =====
 function render(){
   const tWeek = totalsByWeek(model);
@@ -365,6 +443,9 @@ function render(){
 
   // Data input view (week-by-week)
   renderDataInput(tWeek);
+
+  // Insights (controlli deterministici) — aggiorna pagina e badge tab
+  renderInsights(computeInsights());
 
   // Table
   let html = "";
@@ -659,7 +740,7 @@ function addWeek(){
 }
 
 // Bind view navigation (How to / Dashboard / Weekly data updates / Full view)
-const VIEWS = ['howto','dashboard','datainput','full'];
+const VIEWS = ['howto','dashboard','insights','datainput','full'];
 function setView(view){
   if(!VIEWS.includes(view)) view = 'howto';
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
@@ -873,6 +954,10 @@ async function init(){
 
   // Initial render
   render();
+
+  // Call-out flottanti all'apertura, se ci sono segnalazioni
+  const findings = computeInsights();
+  if(findings.length) setTimeout(()=> showCallouts(findings), 400);
 }
 // L'avvio è gestito da auth.js dopo l'autenticazione (Fase 2).
 window.initApp = init;
