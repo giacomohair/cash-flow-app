@@ -795,7 +795,7 @@ function addWeek(){
   materialize(model); save(model); render();
 }
 
-// Bind view navigation (How to / Dashboard / Weekly data updates / Full cash-flow view)
+// Bind view navigation (How to / Dashboard / Weekly data input / Full cash-flow view)
 const VIEWS = ['howto','dashboard','insights','datainput','full'];
 function setView(view){
   if(!VIEWS.includes(view)) view = 'howto';

@@ -88,7 +88,7 @@ lavoro; mostrata SOLO al primo accesso via flag prefs `seenHowto`, poi si entra 
 Dashboard), "Dashboard" (date + KPI + grafici), "Insights" (data-view="insights"; controlli
 deterministici raggruppati per temi + badge sul tab + call-out flottanti all'apertura),
 "Full cash-flow view (best on desktop)" — data-view="full" — (tabella; sulla riga date i
-controlli View segmented + tap-to-expand + toggle pannello Settings) e "Weekly data updates"
+controlli View segmented + tap-to-expand + toggle pannello Settings) e "Weekly data input"
 (aggiornamento settimana per settimana, solo voci NON ricorrenti + sezione carte di credito;
 mobile). Help (menu hamburger) = guida testuale di riferimento, distinta dalla vista How to. Nome app mostrato: "My cash-flow". Nuovi utenti partono da
 `demo()` (dati di esempio, inclusa una carta di credito). `emptyModel()` resta disponibile
