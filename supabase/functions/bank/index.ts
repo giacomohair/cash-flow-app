@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         })
         .map((p: any) => ({ id: p.provider_id || p.id, name: p.display_name || p.name || p.provider_id }))
         .filter((p: any) => p.id);
-      return json({ providers: list });
+      return json({ providers: list, env: ENVN, total: arr.length });
     }
 
     if (action === 'connect') {
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         + `&redirect_uri=${encodeURIComponent(redirectUri)}`
         + `&providers=${encodeURIComponent(provider)}`
         + `&state=${encodeURIComponent(state)}`;
-      return json({ url, state });
+      return json({ url, state, env: ENVN, authHost: AUTH });
     }
 
     if (action === 'callback') {

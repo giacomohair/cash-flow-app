@@ -993,6 +993,7 @@ async function callBank(payload){
 }
 async function connectBank(providerId){
   const r = await callBank({ action:'connect', redirectUri: location.origin, providerId });
+  console.log('bank connect →', { env: r.env, authHost: r.authHost, url: r.url });
   if(r.url){ if(r.state) sessionStorage.setItem('tl_state', r.state); location.href = r.url; }
   else toast('Bank connection unavailable: ' + (r.error||'error'));
 }
