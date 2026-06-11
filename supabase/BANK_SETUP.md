@@ -33,8 +33,11 @@ Nella console TrueLayer (app **Data API**, **Sandbox**) imposta i Redirect URI *
    (back-solve su Adjustment).
 
 ## Passaggio a produzione (dopo verifica ToS/go-live)
-- Cambia i secret: `TL_ENV=live` e `TL_PROVIDERS` con i provider IT/EU desiderati.
-- Usa `client_id`/`client_secret` di produzione e completa il processo "go-live" di TrueLayer.
+- Secret: `TL_ENV=live` + `client_id`/`client_secret` **di produzione** (diversi dalla sandbox);
+  completa il "go-live" di TrueLayer (Italia è in **beta** sulla Data API).
+- `TL_PROVIDERS`: in live il default è già **`it-ob-all`** (tutte le banche IT Open Banking).
+  Per restringere/estendere usa il formato `paese-metodo-banca` (es. `it-ob-all`, `all-ob-revolut`).
+- Elenco provider completo: `GET {AUTH}/api/providers` (la function lo usa per il selettore).
 - Nessuna modifica al codice necessaria.
 
 ## Sicurezza

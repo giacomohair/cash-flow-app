@@ -27,7 +27,9 @@ const json = (obj: unknown, status = 200) =>
 const ENVN = Deno.env.get('TL_ENV') || 'sandbox';
 const AUTH = ENVN === 'live' ? 'https://auth.truelayer.com' : 'https://auth.truelayer-sandbox.com';
 const API  = ENVN === 'live' ? 'https://api.truelayer.com'  : 'https://api.truelayer-sandbox.com';
-const PROVIDERS = Deno.env.get('TL_PROVIDERS') || 'uk-cs-mock';
+// Default provider per il consenso: in live "it-ob-all" (tutte le banche IT Open Banking),
+// in sandbox la banca finta. Override con il secret TL_PROVIDERS.
+const PROVIDERS = Deno.env.get('TL_PROVIDERS') || (ENVN === 'live' ? 'it-ob-all' : 'uk-cs-mock');
 const CLIENT_ID = Deno.env.get('TL_CLIENT_ID') || '';
 const CLIENT_SECRET = Deno.env.get('TL_CLIENT_SECRET') || '';
 
@@ -60,17 +62,17 @@ Deno.serve(async (req) => {
 
     if (action === 'providers') {
       const country = String(body.country || 'it').toLowerCase();
-      const tok = await tlToken({ grant_type: 'client_credentials', scope: 'info accounts balance' });
-      if (!tok.access_token) return json({ error: 'cc_token_failed', env: ENVN, detail: tok }, 400);
-      const res = await fetch(`${API}/data/v1/providers`, { headers: { Authorization: `Bearer ${tok.access_token}` } });
+      // Elenco provider TrueLayer: endpoint sull'host AUTH (non /data/v1/providers).
+      const res = await fetch(`${AUTH}/api/providers`);
       const data = await res.json().catch(() => null);
       const arr = Array.isArray(data) ? data : (data?.results ?? data?.providers ?? []);
       if (!res.ok || !Array.isArray(arr)) return json({ error: 'providers_failed', env: ENVN, status: res.status, detail: data }, 400);
       const list = arr
         .filter((p: any) => {
-          const c = (p.country || '').toLowerCase();
+          const id = String(p.provider_id || p.id || '').toLowerCase();
+          const c = String(p.country || '').toLowerCase();
           const cs = Array.isArray(p.countries) ? p.countries.map((x: string) => String(x).toLowerCase()) : [];
-          return !country || c === country || cs.includes(country);
+          return !country || id.startsWith(country + '-') || c === country || cs.includes(country);
         })
         .map((p: any) => ({ id: p.provider_id || p.id, name: p.display_name || p.name || p.provider_id }))
         .filter((p: any) => p.id);
