@@ -268,6 +268,23 @@
   </div>
 </div>
 
+<!-- Modale: selettore banca (integrazione bancaria) -->
+<div class="modal" id="bankModal">
+  <div class="modal-overlay" id="bankOverlay"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bankTitle">
+    <h2 id="bankTitle">Connect your bank</h2>
+    <p id="bankMsg" style="margin:0 0 12px 0;font-size:13px">Loading banks…</p>
+    <label class="field" id="bankSelectField" style="display:none">
+      <span>Your bank</span>
+      <select id="bankSelect"></select>
+    </label>
+    <div class="modal-actions">
+      <button class="ghost" id="bankCancel" type="button">Cancel</button>
+      <button class="primary" id="bankConnect" type="button">Connect</button>
+    </div>
+  </div>
+</div>
+
 <!-- Call-out insights (pop-up flottanti, in alto a destra) -->
 <div id="callouts" aria-live="polite"></div>
 

@@ -58,14 +58,34 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action;
 
+    if (action === 'providers') {
+      const country = String(body.country || 'it').toLowerCase();
+      const tok = await tlToken({ grant_type: 'client_credentials', scope: 'info accounts balance' });
+      if (!tok.access_token) return json({ error: 'cc_token_failed', detail: tok }, 400);
+      const res = await fetch(`${API}/data/v1/providers`, { headers: { Authorization: `Bearer ${tok.access_token}` } });
+      const data = await res.json().catch(() => null);
+      const arr = Array.isArray(data) ? data : (data?.results ?? data?.providers ?? []);
+      if (!res.ok || !Array.isArray(arr)) return json({ error: 'providers_failed', status: res.status, detail: data }, 400);
+      const list = arr
+        .filter((p: any) => {
+          const c = (p.country || '').toLowerCase();
+          const cs = Array.isArray(p.countries) ? p.countries.map((x: string) => String(x).toLowerCase()) : [];
+          return !country || c === country || cs.includes(country);
+        })
+        .map((p: any) => ({ id: p.provider_id || p.id, name: p.display_name || p.name || p.provider_id }))
+        .filter((p: any) => p.id);
+      return json({ providers: list });
+    }
+
     if (action === 'connect') {
       const redirectUri = String(body.redirectUri || '');
+      const provider = body.providerId ? String(body.providerId) : PROVIDERS;
       const state = 'tlbank_' + crypto.randomUUID();
       const url = `${AUTH}/?response_type=code`
         + `&client_id=${encodeURIComponent(CLIENT_ID)}`
         + `&scope=${encodeURIComponent('info accounts balance offline_access')}`
         + `&redirect_uri=${encodeURIComponent(redirectUri)}`
-        + `&providers=${encodeURIComponent(PROVIDERS)}`
+        + `&providers=${encodeURIComponent(provider)}`
         + `&state=${encodeURIComponent(state)}`;
       return json({ url, state });
     }

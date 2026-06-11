@@ -973,6 +973,7 @@ document.addEventListener('keydown', e=>{
   if(infoModal.classList.contains('show')) closeInfoModal();
   if(howtoModal.classList.contains('show')) closeHowto();
   if(confirmModal.classList.contains('show')) closeConfirm();
+  if(bankModal.classList.contains('show')) closeBank();
 });
 
 // ===== Integrazione bancaria (Edge Function "bank", TrueLayer) =====
@@ -990,20 +991,50 @@ async function callBank(payload){
     return data;
   }catch(e){ return { error:String(e) }; }
 }
-async function connectBank(){
-  const r = await callBank({ action:'connect', redirectUri: location.origin });
+async function connectBank(providerId){
+  const r = await callBank({ action:'connect', redirectUri: location.origin, providerId });
   if(r.url){ if(r.state) sessionStorage.setItem('tl_state', r.state); location.href = r.url; }
   else toast('Bank connection unavailable: ' + (r.error||'error'));
 }
 async function syncBank(weekId){
   toast('Syncing from your bank…');
   const r = await callBank({ action:'balance' });
-  if(r.error==='not_connected'){ connectBank(); return; }     // prima volta: avvia il consenso
+  if(r.error==='not_connected'){ openBankPicker(); return; }   // prima volta: scegli la banca
   if(typeof r.balance==='number'){ editEop(weekId, r.balance); toast(`Synced ${fmt(r.balance)} from your bank.`); return; }
   console.error('bank balance response:', r);
   const det = r.detail ? ' — ' + (typeof r.detail==='string'? r.detail : JSON.stringify(r.detail)).slice(0,140) : '';
   toast('Could not read balance: ' + (r.error||'unknown') + det);
 }
+// Selettore banca: prova l'elenco provider; se non disponibile, usa la schermata TrueLayer.
+const bankModal = document.getElementById('bankModal');
+const bankMsg = document.getElementById('bankMsg');
+const bankSelect = document.getElementById('bankSelect');
+const bankSelectField = document.getElementById('bankSelectField');
+function closeBank(){ bankModal.classList.remove('show'); }
+async function openBankPicker(){
+  bankSelectField.style.display = 'none';
+  bankMsg.textContent = 'Loading banks…';
+  bankModal.classList.add('show');
+  const r = await callBank({ action:'providers', country:'it' });
+  if(r.providers && r.providers.length){
+    bankSelect.innerHTML = r.providers.map(p =>
+      `<option value="${String(p.id).replace(/"/g,'&quot;')}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
+    bankSelectField.style.display = '';
+    bankMsg.textContent = 'Choose your bank, then Connect.';
+  } else {
+    // Fallback: nessun elenco (o errore) → schermata di selezione ospitata da TrueLayer (filtro TL_PROVIDERS)
+    console.error('providers response:', r);
+    closeBank();
+    connectBank();
+  }
+}
+document.getElementById('bankCancel').addEventListener('click', closeBank);
+document.getElementById('bankOverlay').addEventListener('click', closeBank);
+document.getElementById('bankConnect').addEventListener('click', ()=>{
+  const id = bankSelectField.style.display==='none' ? undefined : bankSelect.value;
+  closeBank();
+  connectBank(id);
+});
 // Ritorno dal consenso TrueLayer (?code&state) — chiamato in init() dopo il login.
 async function handleBankRedirect(){
   const qs = new URLSearchParams(location.search);
