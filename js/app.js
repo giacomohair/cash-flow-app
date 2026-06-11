@@ -999,7 +999,12 @@ async function connectBank(providerId){
 async function syncBank(weekId){
   toast('Syncing from your bank…');
   const r = await callBank({ action:'balance' });
-  if(r.error==='not_connected'){ openBankPicker(); return; }   // prima volta: scegli la banca
+  // non connesso, oppure consenso/token scaduto o invalido (es. ri-consenso ~90gg, cambio ambiente) -> ricollega
+  if(r.error==='not_connected' || r.error==='refresh_failed'){
+    toast('Please reconnect your bank.');
+    openBankPicker();
+    return;
+  }
   if(typeof r.balance==='number'){ editEop(weekId, r.balance); toast(`Synced ${fmt(r.balance)} from your bank.`); return; }
   console.error('bank balance response:', r);
   const det = r.detail ? ' — ' + (typeof r.detail==='string'? r.detail : JSON.stringify(r.detail)).slice(0,140) : '';
