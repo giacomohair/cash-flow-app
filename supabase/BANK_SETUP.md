@@ -40,6 +40,20 @@ Nella console TrueLayer (app **Data API**, **Sandbox**) imposta i Redirect URI *
 - Elenco provider completo: `GET {AUTH}/api/providers` (la function lo usa per il selettore).
 - Nessuna modifica al codice necessaria.
 
+## Stato produzione / attivazione TrueLayer
+Il codice è completo e verificato end-to-end (connessione → consenso/SCA → lettura saldo,
+testato con **Revolut** in live). Per andare pienamente in produzione restano due passi
+**lato TrueLayer** (non codice):
+1. **Uscire dal "test mode"**: completare il **go-live/attivazione** dell'app Live (rimuove
+   il banner "Testing mode" ed eroga dati reali).
+2. **Abilitare i provider Italia (beta)** per il `client_id` live (le banche retail IT non
+   sono attive di default; vanno richieste).
+
+Config provider:
+- Finché l'Italia NON è abilitata: `TL_PROVIDERS = all-ob-revolut` (funziona). NON usare
+  `it-ob-all` prima dell'abilitazione, altrimenti il consenso dà **bad request**.
+- Dopo l'abilitazione: `TL_PROVIDERS = it-ob-all all-ob-revolut` (le banche IT compaiono da sé).
+
 ## Sicurezza
 - Chiavi TrueLayer: solo come secret della function.
 - `bank_connections` (incl. `refresh_token`): protetta da RLS per-utente. Valuta cifratura/retention
