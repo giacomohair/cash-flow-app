@@ -29,7 +29,7 @@ const AUTH = ENVN === 'live' ? 'https://auth.truelayer.com' : 'https://auth.true
 const API  = ENVN === 'live' ? 'https://api.truelayer.com'  : 'https://api.truelayer-sandbox.com';
 // Default provider per il consenso: in live "it-ob-all" (tutte le banche IT Open Banking),
 // in sandbox la banca finta. Override con il secret TL_PROVIDERS.
-const PROVIDERS = Deno.env.get('TL_PROVIDERS') || (ENVN === 'live' ? 'it-ob-all' : 'uk-cs-mock');
+const PROVIDERS = Deno.env.get('TL_PROVIDERS') || (ENVN === 'live' ? 'it-ob-all all-ob-revolut' : 'uk-cs-mock');
 const CLIENT_ID = Deno.env.get('TL_CLIENT_ID') || '';
 const CLIENT_SECRET = Deno.env.get('TL_CLIENT_SECRET') || '';
 

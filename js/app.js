@@ -1017,26 +1017,12 @@ const bankMsg = document.getElementById('bankMsg');
 const bankSelect = document.getElementById('bankSelect');
 const bankSelectField = document.getElementById('bankSelectField');
 function closeBank(){ bankModal.classList.remove('show'); }
-async function openBankPicker(){
+function openBankPicker(){
+  // La scelta della banca avviene sulla pagina sicura di TrueLayer (hosted screen):
+  // più robusto del link per-provider (che dava "bad request" con id non-filtro).
   bankSelectField.style.display = 'none';
-  bankMsg.textContent = 'Loading banks…';
+  bankMsg.textContent = "You'll choose your bank on TrueLayer's secure page.";
   bankModal.classList.add('show');
-  const r = await callBank({ action:'providers', country:'it' });
-  if(r.providers && r.providers.length){
-    bankSelect.innerHTML = r.providers.map(p =>
-      `<option value="${String(p.id).replace(/"/g,'&quot;')}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
-    bankSelectField.style.display = '';
-    bankMsg.textContent = `Choose your bank, then Connect. (env: ${r.env||'?'})`;
-  } else {
-    // Nessun elenco: NON reindirizzo subito; mostro la diagnostica così è leggibile.
-    bankSelectField.style.display = 'none';
-    const detStr = r.detail ? (typeof r.detail==='string'? r.detail : JSON.stringify(r.detail)) : '';
-    bankMsg.textContent = `No bank list — env: ${r.env||'?'}, count: ${r.total??0}`
-      + (r.error ? `, error: ${r.error}` : '')
-      + (r.status ? `, status: ${r.status}` : '')
-      + (detStr ? `, detail: ${detStr.slice(0,180)}` : '')
-      + `. Press Connect to use TrueLayer's screen.`;
-  }
 }
 document.getElementById('bankCancel').addEventListener('click', closeBank);
 document.getElementById('bankOverlay').addEventListener('click', closeBank);
