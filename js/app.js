@@ -994,8 +994,15 @@ async function callBank(payload){
 async function connectBank(providerId){
   const r = await callBank({ action:'connect', redirectUri: location.origin, providerId });
   console.log('bank connect →', { env: r.env, authHost: r.authHost, url: r.url });
-  if(r.url){ if(r.state) sessionStorage.setItem('tl_state', r.state); location.href = r.url; }
-  else toast('Bank connection unavailable: ' + (r.error||'error'));
+  if(!r.url){ toast('Bank connection unavailable: ' + (r.error||'error')); return; }
+  if(r.state) sessionStorage.setItem('tl_state', r.state);
+  // Mostra l'URL esatto (ispezionabile/copiabile) + link per procedere, così se TrueLayer
+  // risponde "bad request" possiamo leggere i parametri (redirect_uri, providers, client_id).
+  bankSelectField.style.display = 'none';
+  bankMsg.innerHTML = `Continue to TrueLayer to authorise: `
+    + `<a href="${r.url}" rel="noopener">Open TrueLayer →</a>`
+    + `<br><small style="opacity:.65;word-break:break-all">${r.url.replace(/</g,'&lt;')}</small>`;
+  bankModal.classList.add('show');
 }
 async function syncBank(weekId){
   toast('Syncing from your bank…');
