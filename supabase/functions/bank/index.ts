@@ -61,11 +61,11 @@ Deno.serve(async (req) => {
     if (action === 'providers') {
       const country = String(body.country || 'it').toLowerCase();
       const tok = await tlToken({ grant_type: 'client_credentials', scope: 'info accounts balance' });
-      if (!tok.access_token) return json({ error: 'cc_token_failed', detail: tok }, 400);
+      if (!tok.access_token) return json({ error: 'cc_token_failed', env: ENVN, detail: tok }, 400);
       const res = await fetch(`${API}/data/v1/providers`, { headers: { Authorization: `Bearer ${tok.access_token}` } });
       const data = await res.json().catch(() => null);
       const arr = Array.isArray(data) ? data : (data?.results ?? data?.providers ?? []);
-      if (!res.ok || !Array.isArray(arr)) return json({ error: 'providers_failed', status: res.status, detail: data }, 400);
+      if (!res.ok || !Array.isArray(arr)) return json({ error: 'providers_failed', env: ENVN, status: res.status, detail: data }, 400);
       const list = arr
         .filter((p: any) => {
           const c = (p.country || '').toLowerCase();

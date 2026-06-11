@@ -1030,9 +1030,12 @@ async function openBankPicker(){
   } else {
     // Nessun elenco: NON reindirizzo subito; mostro la diagnostica così è leggibile.
     bankSelectField.style.display = 'none';
-    bankMsg.textContent = `No bank list available — env: ${r.env||'?'}, count: ${r.total??0}`
+    const detStr = r.detail ? (typeof r.detail==='string'? r.detail : JSON.stringify(r.detail)) : '';
+    bankMsg.textContent = `No bank list — env: ${r.env||'?'}, count: ${r.total??0}`
       + (r.error ? `, error: ${r.error}` : '')
-      + `. Press Connect to continue on TrueLayer's own screen.`;
+      + (r.status ? `, status: ${r.status}` : '')
+      + (detStr ? `, detail: ${detStr.slice(0,180)}` : '')
+      + `. Press Connect to use TrueLayer's screen.`;
   }
 }
 document.getElementById('bankCancel').addEventListener('click', closeBank);
