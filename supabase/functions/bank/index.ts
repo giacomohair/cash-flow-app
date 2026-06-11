@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       const state = 'tlbank_' + crypto.randomUUID();
       const url = `${AUTH}/?response_type=code`
         + `&client_id=${encodeURIComponent(CLIENT_ID)}`
-        + `&scope=${encodeURIComponent('info accounts balance')}`
+        + `&scope=${encodeURIComponent('info accounts balance offline_access')}`
         + `&redirect_uri=${encodeURIComponent(redirectUri)}`
         + `&providers=${encodeURIComponent(PROVIDERS)}`
         + `&state=${encodeURIComponent(state)}`;

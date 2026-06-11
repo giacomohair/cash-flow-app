@@ -985,7 +985,9 @@ async function callBank(payload){
       headers:{ 'content-type':'application/json', Authorization:`Bearer ${session.access_token}` },
       body: JSON.stringify(payload),
     });
-    return await res.json();
+    const data = await res.json().catch(()=>({ error:'bad_json' }));
+    if(!res.ok && !data.error) data.error = 'http_'+res.status;
+    return data;
   }catch(e){ return { error:String(e) }; }
 }
 async function connectBank(){
@@ -997,8 +999,10 @@ async function syncBank(weekId){
   toast('Syncing from your bank…');
   const r = await callBank({ action:'balance' });
   if(r.error==='not_connected'){ connectBank(); return; }     // prima volta: avvia il consenso
-  if(typeof r.balance==='number'){ editEop(weekId, r.balance); toast(`Synced ${fmt(r.balance)} from your bank.`); }
-  else toast('Could not read balance: ' + (r.error||'error'));
+  if(typeof r.balance==='number'){ editEop(weekId, r.balance); toast(`Synced ${fmt(r.balance)} from your bank.`); return; }
+  console.error('bank balance response:', r);
+  const det = r.detail ? ' — ' + (typeof r.detail==='string'? r.detail : JSON.stringify(r.detail)).slice(0,140) : '';
+  toast('Could not read balance: ' + (r.error||'unknown') + det);
 }
 // Ritorno dal consenso TrueLayer (?code&state) — chiamato in init() dopo il login.
 async function handleBankRedirect(){
