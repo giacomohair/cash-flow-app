@@ -1026,12 +1026,13 @@ async function openBankPicker(){
     bankSelect.innerHTML = r.providers.map(p =>
       `<option value="${String(p.id).replace(/"/g,'&quot;')}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
     bankSelectField.style.display = '';
-    bankMsg.textContent = 'Choose your bank, then Connect.';
+    bankMsg.textContent = `Choose your bank, then Connect. (env: ${r.env||'?'})`;
   } else {
-    // Fallback: nessun elenco (o errore) → schermata di selezione ospitata da TrueLayer (filtro TL_PROVIDERS)
-    console.error('providers response:', r);
-    closeBank();
-    connectBank();
+    // Nessun elenco: NON reindirizzo subito; mostro la diagnostica così è leggibile.
+    bankSelectField.style.display = 'none';
+    bankMsg.textContent = `No bank list available — env: ${r.env||'?'}, count: ${r.total??0}`
+      + (r.error ? `, error: ${r.error}` : '')
+      + `. Press Connect to continue on TrueLayer's own screen.`;
   }
 }
 document.getElementById('bankCancel').addEventListener('click', closeBank);
