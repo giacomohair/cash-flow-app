@@ -328,7 +328,8 @@ function renderDataInput(tWeek){
       <label class="di-name">Actual cash now (EoP)</label>
       <input class="di-input di-eop" type="number" inputmode="decimal" value="${t.eop}" onblur="editEop('${w.id}', this.value)">
     </div>
-    <div class="di-hint">Typing here adjusts the Adjustment row so the balance matches your real cash.</div>
+    <button class="ghost di-add" onclick="syncBank('${w.id}')">🏦 Sync from bank</button>
+    <div class="di-hint">Typing here (or syncing from your bank) adjusts the Adjustment row so the balance matches your real cash.</div>
   </div>`;
   el.innerHTML = h;
 }
@@ -974,8 +975,46 @@ document.addEventListener('keydown', e=>{
   if(confirmModal.classList.contains('show')) closeConfirm();
 });
 
+// ===== Integrazione bancaria (Edge Function "bank", TrueLayer) =====
+async function callBank(payload){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) return { error:'no_session' };
+  try{
+    const res = await fetch(`${window.SUPABASE_URL}/functions/v1/bank`, {
+      method:'POST',
+      headers:{ 'content-type':'application/json', Authorization:`Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  }catch(e){ return { error:String(e) }; }
+}
+async function connectBank(){
+  const r = await callBank({ action:'connect', redirectUri: location.origin });
+  if(r.url){ if(r.state) sessionStorage.setItem('tl_state', r.state); location.href = r.url; }
+  else toast('Bank connection unavailable: ' + (r.error||'error'));
+}
+async function syncBank(weekId){
+  toast('Syncing from your bank…');
+  const r = await callBank({ action:'balance' });
+  if(r.error==='not_connected'){ connectBank(); return; }     // prima volta: avvia il consenso
+  if(typeof r.balance==='number'){ editEop(weekId, r.balance); toast(`Synced ${fmt(r.balance)} from your bank.`); }
+  else toast('Could not read balance: ' + (r.error||'error'));
+}
+// Ritorno dal consenso TrueLayer (?code&state) — chiamato in init() dopo il login.
+async function handleBankRedirect(){
+  const qs = new URLSearchParams(location.search);
+  const code = qs.get('code'), st = qs.get('state');
+  if(!code || !st || st !== sessionStorage.getItem('tl_state')) return;
+  sessionStorage.removeItem('tl_state');
+  const r = await callBank({ action:'callback', code, redirectUri: location.origin });
+  history.replaceState({}, '', location.origin + location.pathname); // pulisci l'URL
+  toast(r.connected ? 'Bank connected ✓' : 'Bank connection failed: ' + (r.error||'error'));
+}
+
 // Expose some funcs for inline handlers
 window.togglePeriod = togglePeriod;
+window.syncBank = syncBank;
+window.connectBank = connectBank;
 window.gotoView = gotoView;
 window.editCell = editCell;
 window.editEop = editEop;
@@ -1010,6 +1049,9 @@ async function init(){
 
   // Initial render
   render();
+
+  // Ritorno dal consenso bancario (TrueLayer) se presente nell'URL
+  handleBankRedirect();
 
   // Call-out flottanti all'apertura, se ci sono segnalazioni
   const findings = computeInsights();
