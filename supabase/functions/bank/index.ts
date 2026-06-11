@@ -63,7 +63,10 @@ Deno.serve(async (req) => {
     if (action === 'providers') {
       const country = String(body.country || 'it').toLowerCase();
       // Elenco provider TrueLayer: endpoint sull'host AUTH (non /data/v1/providers).
-      const res = await fetch(`${AUTH}/api/providers`);
+      // Autenticato col client: può restituire l'elenco abilitato per il client_id.
+      const cc = await tlToken({ grant_type: 'client_credentials', scope: 'info accounts balance' });
+      const res = await fetch(`${AUTH}/api/providers`,
+        cc.access_token ? { headers: { Authorization: `Bearer ${cc.access_token}` } } : undefined);
       const data = await res.json().catch(() => null);
       const arr = Array.isArray(data) ? data : (data?.results ?? data?.providers ?? []);
       if (!res.ok || !Array.isArray(arr)) return json({ error: 'providers_failed', env: ENVN, status: res.status, detail: data }, 400);
