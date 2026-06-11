@@ -122,10 +122,20 @@ i test.
       "fai una domanda sui tuoi numeri". RICHIEDE backend: **Supabase Edge Function**
       (la API key NON può stare nel frontend) che legge i dati via RLS e chiama Claude.
       Opt-in (dati finanziari).
-8. **Integrazione bancaria (EoP reale)**: collegare il conto via aggregatore open-banking
-   PSD2 (es. GoCardless Bank Account Data/Nordigen) per impostare in automatico
-   l'"Actual cash now (EoP)". Richiede backend (Edge Functions), consenso PSD2
-   (ri-consenso ~90gg) e attenzione a sicurezza/retention. Il più pesante: resta in coda.
+8. **Integrazione bancaria (EoP reale)** — IN LAVORAZIONE: collegare il conto via
+   **GoCardless Bank Account Data** (ex-Nordigen, free tier ~50 end-user, combacia col
+   target) per leggere il **saldo** e impostare l'"Actual cash now (EoP)" (riusa il
+   back-solve su Adjustment). Decisioni prese:
+   - **Backend**: Supabase **Edge Function** (`bank`) che custodisce le chiavi GoCardless
+     (`secret_id`/`secret_key` come SECRET, mai nel frontend) e fa da proxy: lista istituti,
+     crea requisition (consenso+SCA via redirect), legge i balances. Verifica il JWT utente.
+   - **Persistenza link**: nuova tabella `bank_connections(user_id, institution_id,
+     requisition_id, account_id, updated_at)` con RLS (NON inquinare model/prefs).
+   - **Percorso**: prima **sandbox** GoCardless (banche finte, zero requisiti) per costruire
+     il flusso; produzione su banche reali dopo aver verificato i loro ToS (uso personale).
+     **Piano B** se la produzione richiede una P.IVA: **import manuale CSV/OFX** del saldo.
+   - Deploy della function via **dashboard Supabase** (Edge Functions), niente CLI obbligatoria.
+   - PSD2: consenso per-utente con **ri-consenso ~90gg**; attenzione a sicurezza/retention.
 
 > NOTA architetturale: 7b e 8 introducono un BACKEND (Supabase Edge Functions),
 > superando il vincolo attuale "solo frontend + client Supabase". Decisione consapevole
