@@ -92,8 +92,12 @@ controlli View segmented + tap-to-expand + toggle pannello Settings) e "Weekly d
 (aggiornamento settimana per settimana, solo voci NON ricorrenti + sezione carte di credito;
 mobile). Help (menu hamburger) = guida testuale di riferimento, distinta dalla vista How to. Nome app mostrato: "My cash-flow". Nuovi utenti partono da
 `demo()` (dati di esempio, inclusa una carta di credito). `emptyModel()` resta disponibile
-ma non in uso. "Confirm email" disattivato per
-i test.
+ma non in uso. "Confirm email" disattivato per i test.
+Multi-conto cassa (additivo nel model): `model.accounts[]` + `model.balances[weekId][accountId]`;
+l'EoP della settimana = SOMMA dei saldi conto (back-solve su Adjustment, `reconcileWeek`),
+inseribili una banca per riga sia in "Weekly data input" sia nella tabella (riga EoP in sola
+lettura + N righe per-conto). Gestione conti (manuali) + connessione banca nel modale
+"Banks & cash" (menu hamburger). Campo vuoto = saldo non inserito.
 
 ## Backlog (da fare)
 1. **EoP effettivo** (deciso in Fase 0): riga EoP editabile → back-solve su Adjustment,

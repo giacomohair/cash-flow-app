@@ -327,10 +327,10 @@ function renderDataInput(tWeek){
   h += `<div class="di-group"><div class="di-group-title">Actual cash at end of week</div>`;
   if(accs.length){
     for(const a of accs){
-      const bal = Number((model.balances?.[w.id] || {})[a.id] || 0);
+      const v = accBal(w.id, a.id);
       h += `<div class="di-eoprow">
         <label class="di-name">${a.name}</label>
-        <input class="di-input" type="number" inputmode="decimal" value="${bal}" onblur="setAccountBalance('${w.id}','${a.id}', this.value)">
+        <input class="di-input" type="number" inputmode="decimal" placeholder="0" value="${v!=null ? v : ''}" onblur="setAccountBalance('${w.id}','${a.id}', this.value)">
       </div>`;
     }
     const reconciled = !!(model.balances && model.balances[w.id] && Object.keys(model.balances[w.id]).length);
@@ -662,8 +662,9 @@ function render(){
     }
   }
   html += '</tr>';
-  // EoP row: editable per-week (type the actual end-of-period cash -> back-solve Adjustment).
-  // Aggregated (collapsed) periods stay read-only.
+  // EoP row. Senza conti: editabile (back-solve diretto). Con conti: somma in SOLA LETTURA
+  // (si inseriscono i saldi nelle righe per-conto sotto). Periodi compressi: sola lettura.
+  const hasAccs = accountsList().length > 0;
   html += '<tr><td class="sticky">EoP (End of Period)</td>';
   for(const p of periods){
     if(ui.collapsed[p.id]){
@@ -676,11 +677,34 @@ function render(){
         const eop = tWeek2[wid].eop;
         const tdCls = (eop < thr2) ? 'danger-bg' : '';
         const inCls = (eop < thr2) ? 'danger' : '';
-        html += `<td class="${tdCls}"><input class="cell eop-cell ${inCls}" type="number" inputmode="decimal" value="${eop}" onblur="editEop('${wid}', this.value)" title="Type the actual end-of-period cash; the Adjustment row is recomputed"></td>`;
+        if(hasAccs){
+          html += `<td class="${tdCls} ${inCls}" title="Sum of your accounts (edit the account rows below)">${fmt(eop)}</td>`;
+        } else {
+          html += `<td class="${tdCls}"><input class="cell eop-cell ${inCls}" type="number" inputmode="decimal" value="${eop}" onblur="editEop('${wid}', this.value)" title="Type the actual end-of-period cash; the Adjustment row is recomputed"></td>`;
+        }
       }
     }
   }
   html += '</tr>';
+  // Righe per-conto (breakdown dell'EoP): inserimento manuale per settimana, una banca per riga.
+  if(hasAccs){
+    for(const a of accountsList()){
+      html += `<tr class="account-row"><td class="sticky">↳ ${a.name}</td>`;
+      for(const p of periods){
+        if(ui.collapsed[p.id]){
+          const lastWid = p.weeks[p.weeks.length-1];
+          const v = accBal(lastWid, a.id);
+          html += `<td>${v!=null ? fmt(v) : '—'}</td>`;
+        } else {
+          for(const wid of p.weeks){
+            const v = accBal(wid, a.id);
+            html += `<td><input class="cell" type="number" inputmode="decimal" placeholder="0" value="${v!=null ? v : ''}" onblur="setAccountBalance('${wid}','${a.id}', this.value)"></td>`;
+          }
+        }
+      }
+      html += '</tr>';
+    }
+  }
   // Running Savings
   html += '<tr><td class="sticky" style="color:#0f766e;font-weight:600">Running Savings</td>';
   for(const p of periods){
@@ -729,11 +753,19 @@ function reconcileWeek(weekId){
   if(!(model.balances && model.balances[weekId])) return;
   backSolveEop(weekId, weekActualSum(weekId));
 }
+// Saldo inserito per (settimana, conto): null se non inserito.
+function accBal(weekId, accId){
+  const b = model.balances && model.balances[weekId];
+  return (b && (accId in b)) ? Number(b[accId]) : null;
+}
 function setAccountBalance(weekId, accId, raw){
   model.balances = model.balances || {};
-  model.balances[weekId] = model.balances[weekId] || {};
-  model.balances[weekId][accId] = Number(raw||0);
-  reconcileWeek(weekId);
+  const wk = model.balances[weekId] = model.balances[weekId] || {};
+  const s = String(raw == null ? '' : raw).trim();
+  if(s === ''){ delete wk[accId]; }            // campo svuotato -> non inserito
+  else { wk[accId] = Number(s) || 0; }
+  if(Object.keys(wk).length === 0){ delete model.balances[weekId]; } // settimana non più riconciliata
+  else { reconcileWeek(weekId); }
   materialize(model); save(model); render();
 }
 function addAccount(name){

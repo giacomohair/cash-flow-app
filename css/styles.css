@@ -242,6 +242,9 @@ td.agg-cell input[disabled]{pointer-events:none}
 .bk-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .bk-row:last-child{border-bottom:none}
 .bk-name{font-size:15px}
+/* Righe per-conto sotto l'EoP nella tabella completa */
+tbody tr.account-row td.sticky{color:#6B7280;padding-left:18px}
+tbody tr.account-row td{color:#6B7280}
 .di-hint{font-size:12px;opacity:.7;margin-top:8px}
 .di-note{font-size:12px;color:var(--chip-text);background:var(--chip-bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:12px;line-height:1.4}
 /* Carte di credito nel Weekly data input */
