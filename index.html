@@ -85,6 +85,7 @@
     <div id="userInfo" style="font-size:13px;opacity:.8;margin-bottom:10px;word-break:break-all"></div>
     <a href="#" id="menuPersonalArea">👤 Personal Area</a>
     <a href="#" id="menuSettings">⚙️ Settings</a>
+    <a href="#" id="menuBanks">🏦 Banks &amp; cash</a>
     <a href="#" id="menuHelp">❓ Help</a>
     <a href="#" id="logoutBtn">🚪 Logout</a>
     <hr style="margin:12px 0;border:none;border-top:1px solid var(--line)"/>
@@ -264,6 +265,24 @@
     <div class="modal-actions">
       <button class="ghost" id="itemCancel" type="button">Cancel</button>
       <button class="primary" id="itemSave" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale: Banks & cash (conti manuali + connessione banca) -->
+<div class="modal" id="banksModal">
+  <div class="modal-overlay" id="banksModalOverlay"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="banksModalTitle">
+    <h2 id="banksModalTitle">Banks &amp; cash accounts</h2>
+    <p style="font-size:13px;opacity:.75;margin:0 0 10px">Your end-of-week cash (EoP) is the sum of these accounts. Add them manually, or connect a bank.</p>
+    <div id="banksList"></div>
+    <label class="field">
+      <span>Add a cash account / bank (manual)</span>
+      <span class="bk-add"><input id="newAccountName" type="text" placeholder="e.g. Intesa, Revolut, Cash"><button class="ghost" id="addAccountBtn" type="button">Add</button></span>
+    </label>
+    <div id="banksBankBox"></div>
+    <div class="modal-actions">
+      <button class="primary" id="banksClose" type="button">Done</button>
     </div>
   </div>
 </div>

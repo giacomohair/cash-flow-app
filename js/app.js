@@ -323,14 +323,28 @@ function renderDataInput(tWeek){
   h += cards.length ? cards.map(r=>diCardRow(r, idx)).join('') : `<div class="di-empty">No credit cards yet.</div>`;
   h += `<button class="ghost di-add" onclick="openItemModal({mode:'add',type:'OUTFLOW',card:true})">+ Add credit card</button>`;
   h += `</div>`;
-  h += `<div class="di-group"><div class="di-group-title">Actual cash at end of week</div>
-    <div class="di-eoprow">
+  const accs = accountsList();
+  h += `<div class="di-group"><div class="di-group-title">Actual cash at end of week</div>`;
+  if(accs.length){
+    for(const a of accs){
+      const bal = Number((model.balances?.[w.id] || {})[a.id] || 0);
+      h += `<div class="di-eoprow">
+        <label class="di-name">${a.name}</label>
+        <input class="di-input" type="number" inputmode="decimal" value="${bal}" onblur="setAccountBalance('${w.id}','${a.id}', this.value)">
+      </div>`;
+    }
+    const reconciled = !!(model.balances && model.balances[w.id] && Object.keys(model.balances[w.id]).length);
+    const totalShown = reconciled ? weekActualSum(w.id) : t.eop;
+    h += `<div class="di-eoprow di-eop-total"><label class="di-name">EoP (total)</label><span class="di-total">${fmt(totalShown)}</span></div>`;
+    h += `<div class="di-hint">EoP = sum of your accounts; entering a balance back-solves the Adjustment. Manage accounts or connect a bank from <a href="#" onclick="openBanks();return false;">Banks &amp; cash</a>.</div>`;
+  } else {
+    h += `<div class="di-eoprow">
       <label class="di-name">Actual cash now (EoP)</label>
       <input class="di-input di-eop" type="number" inputmode="decimal" value="${t.eop}" onblur="editEop('${w.id}', this.value)">
-    </div>
-    <button class="ghost di-add" onclick="syncBank('${w.id}')">🏦 Sync from bank</button>
-    <div class="di-hint">Typing here (or syncing from your bank) adjusts the Adjustment row so the balance matches your real cash.</div>
-  </div>`;
+    </div>`;
+    h += `<div class="di-hint">Typing here adjusts the Adjustment so the balance matches reality. Tip: add your accounts or connect a bank in <a href="#" onclick="openBanks();return false;">Banks &amp; cash</a>.</div>`;
+  }
+  h += `</div>`;
   el.innerHTML = h;
 }
 function diStep(delta){
@@ -694,14 +708,52 @@ function editCell(section,rowId,weekId,raw){
 // EoP effettivo: l'utente digita la cassa reale di fine settimana e si calcola a
 // ritroso la riga Adjustment (vedi decisione Fase 0). EOP resta calcolato (bop+net);
 // cambia solo Adjustment, il data model è preservato.
-function editEop(weekId, raw){
+// Back-solve l'Adjustment della settimana perché l'EoP combaci con `target`.
+function backSolveEop(weekId, target){
   const adj = model.negatives.find(r=>r.isAdjustment); if(!adj) return;
   const t = totalsByWeek(model)[weekId]; if(!t) return;
   const adjVal = Number(adj.values[weekId]||0);
   const netExclAdj = t.net - adjVal;            // net della settimana ESCLUSO Adjustment
-  const target = Number(raw||0);
-  adj.values[weekId] = target - t.bop - netExclAdj;  // bop(i)=eop(i-1), invariato da questa modifica
+  adj.values[weekId] = Number(target||0) - t.bop - netExclAdj;  // bop(i)=eop(i-1), invariato
+}
+function editEop(weekId, raw){ backSolveEop(weekId, Number(raw||0)); materialize(model); save(model); render(); }
+
+// ===== Conti cassa/banca (Opzione A): EoP = somma dei saldi per-conto =====
+function accountsList(){ return Array.isArray(model.accounts) ? model.accounts : []; }
+function weekActualSum(weekId){
+  const b = (model.balances && model.balances[weekId]) || {};
+  return accountsList().reduce((s,a)=> s + Number(b[a.id]||0), 0);
+}
+// Ricalcola l'Adjustment della settimana dalla somma dei saldi conto (se la settimana è "riconciliata").
+function reconcileWeek(weekId){
+  if(!(model.balances && model.balances[weekId])) return;
+  backSolveEop(weekId, weekActualSum(weekId));
+}
+function setAccountBalance(weekId, accId, raw){
+  model.balances = model.balances || {};
+  model.balances[weekId] = model.balances[weekId] || {};
+  model.balances[weekId][accId] = Number(raw||0);
+  reconcileWeek(weekId);
   materialize(model); save(model); render();
+}
+function addAccount(name){
+  name = (name||'').trim(); if(!name) return;
+  model.accounts = accountsList();
+  model.accounts.push({ id: uid(), name });
+  save(model); render(); renderBanksModal();
+}
+function removeAccount(accId){
+  model.accounts = accountsList().filter(a=>a.id!==accId);
+  if(model.balances){
+    for(const wid of Object.keys(model.balances)){
+      if(model.balances[wid] && (accId in model.balances[wid])){
+        delete model.balances[wid][accId];
+        if(Object.keys(model.balances[wid]).length===0) delete model.balances[wid];
+        else reconcileWeek(wid);
+      }
+    }
+  }
+  materialize(model); save(model); render(); renderBanksModal();
 }
 function deleteRow(section,rowId){
   const group = model[section];
@@ -974,6 +1026,7 @@ document.addEventListener('keydown', e=>{
   if(howtoModal.classList.contains('show')) closeHowto();
   if(confirmModal.classList.contains('show')) closeConfirm();
   if(bankModal.classList.contains('show')) closeBank();
+  if(banksModal.classList.contains('show')) closeBanks();
 });
 
 // ===== Integrazione bancaria (Edge Function "bank", TrueLayer) =====
@@ -1038,6 +1091,29 @@ document.getElementById('bankConnect').addEventListener('click', ()=>{
   closeBank();
   connectBank(id);
 });
+// ===== Modale "Banks & cash" (conti manuali + connessione banca) =====
+const banksModal = document.getElementById('banksModal');
+const banksList = document.getElementById('banksList');
+const banksBankBox = document.getElementById('banksBankBox');
+const newAccountName = document.getElementById('newAccountName');
+function renderBanksModal(){
+  const accs = accountsList();
+  banksList.innerHTML = accs.length
+    ? accs.map(a => `<div class="bk-row"><span class="bk-name">${a.name}</span><button class="iconbtn" title="Remove" onclick="removeAccount('${a.id}')">🗑️</button></div>`).join('')
+    : `<div class="di-empty">No accounts yet — add one below, or connect a bank.</div>`;
+  let box = `<button class="ghost" type="button" onclick="openBankPicker()">🏦 Connect a bank (TrueLayer)</button>`;
+  if(!accs.length) box += ` <button class="ghost" type="button" onclick="syncBank(currentWeekId())">Sync balance → this week's EoP</button>`;
+  box += `<div class="di-hint">Auto-syncing each bank to its own account will arrive once bank access is fully live; for now add accounts manually.</div>`;
+  banksBankBox.innerHTML = box;
+}
+function openBanks(){ drawer.classList.remove('show'); renderBanksModal(); banksModal.classList.add('show'); }
+function closeBanks(){ banksModal.classList.remove('show'); }
+document.getElementById('menuBanks').addEventListener('click', e=>{ e.preventDefault(); openBanks(); });
+document.getElementById('banksClose').addEventListener('click', closeBanks);
+document.getElementById('banksModalOverlay').addEventListener('click', closeBanks);
+document.getElementById('addAccountBtn').addEventListener('click', ()=>{ addAccount(newAccountName.value); newAccountName.value=''; });
+newAccountName.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addAccount(newAccountName.value); newAccountName.value=''; } });
+
 // Ritorno dal consenso TrueLayer (?code&state) — chiamato in init() dopo il login.
 async function handleBankRedirect(){
   const qs = new URLSearchParams(location.search);
@@ -1050,6 +1126,11 @@ async function handleBankRedirect(){
 }
 
 // Expose some funcs for inline handlers
+window.setAccountBalance = setAccountBalance;
+window.removeAccount = removeAccount;
+window.openBanks = openBanks;
+window.openBankPicker = openBankPicker;
+window.currentWeekId = currentWeekId;
 window.togglePeriod = togglePeriod;
 window.syncBank = syncBank;
 window.connectBank = connectBank;
