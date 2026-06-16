@@ -665,7 +665,7 @@ function render(){
   // EoP row. Senza conti: editabile (back-solve diretto). Con conti: somma in SOLA LETTURA
   // (si inseriscono i saldi nelle righe per-conto sotto). Periodi compressi: sola lettura.
   const hasAccs = accountsList().length > 0;
-  html += '<tr><td class="sticky">EoP (End of Period)</td>';
+  html += '<tr><td class="sticky">EoP (End of Period) <button class="iconbtn" title="Add a cash account / bank" onclick="openBanks()">＋</button></td>';
   for(const p of periods){
     if(ui.collapsed[p.id]){
       const lastWid = p.weeks[p.weeks.length-1];
@@ -838,7 +838,6 @@ confirmOkBtn.addEventListener('click', ()=>{ const cb = confirmCb; closeConfirm(
 document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
 document.getElementById('confirmOverlay').addEventListener('click', closeConfirm);
 document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
-document.getElementById('menuSettings').addEventListener('click', e=>{ e.preventDefault(); showInfo('Settings', 'Coming soon. App settings live here, while the table options are in the “Settings” panel inside the “Full cash-flow view”.'); });
 // How-to guide modal
 const howtoModal = document.getElementById('howtoModal');
 function openHowto(){ drawer.classList.remove('show'); howtoModal.classList.add('show'); }
@@ -1140,7 +1139,10 @@ function renderBanksModal(){
 }
 function openBanks(){ drawer.classList.remove('show'); renderBanksModal(); banksModal.classList.add('show'); }
 function closeBanks(){ banksModal.classList.remove('show'); }
-document.getElementById('menuBanks').addEventListener('click', e=>{ e.preventDefault(); openBanks(); });
+document.getElementById('menuBanks').addEventListener('click', e=>{ e.preventDefault();
+  showInfo('Connect your banks', 'Automatic bank connections are coming soon (work in progress). For now, add your accounts manually in the ⚙️ Settings of the “Full cash-flow view” (or with the + on the table), then enter each balance.');
+});
+document.getElementById('manageBanksBtn').addEventListener('click', openBanks);
 document.getElementById('banksClose').addEventListener('click', closeBanks);
 document.getElementById('banksModalOverlay').addEventListener('click', closeBanks);
 document.getElementById('addAccountBtn').addEventListener('click', ()=>{ addAccount(newAccountName.value); newAccountName.value=''; });
