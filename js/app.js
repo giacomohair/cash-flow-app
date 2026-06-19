@@ -491,6 +491,8 @@ function showCallouts(rawItems){
 function render(){
   const tWeek = totalsByWeek(model);
   const periods = buildPeriods(model, ui.gran);
+  const CUR = currentWeekId();                 // settimana corrente (contiene oggi)
+  const cw = wid => (wid===CUR ? ' cw' : '');  // classe shading settimana corrente
   const eopLast = model.weeks.length? tWeek[model.weeks[model.weeks.length-1].id].eop : 0;
   const runSavLast = model.weeks.length? tWeek[model.weeks[model.weeks.length-1].id].runSav : 0;
   const thr = Number(ui.eopThreshold||0);
@@ -531,7 +533,8 @@ function render(){
     if(togglable){
       html += `<th colspan="${span}" class="period-th" onclick="togglePeriod('${p.id}')" title="${collapsed?'Tap to expand into weeks':'Tap to collapse'}"><span class="chev">${collapsed?'▸':'▾'}</span> ${p.label}</th>`;
     } else {
-      html += `<th colspan="${span}">${p.label}</th>`;
+      // A granularità WEEK ogni periodo è una settimana: evidenzia quella corrente.
+      html += `<th colspan="${span}" class="${cw(p.weeks[0])}">${p.label}</th>`;
     }
   }
   html += '</tr>';
@@ -547,7 +550,7 @@ function render(){
       if(ui.collapsed[p.id]){
         html += `<th></th>`;
       } else {
-        for(const wid of p.weeks){ html += `<th>${weekLabelById(wid)}</th>`; }
+        for(const wid of p.weeks){ html += `<th class="${cw(wid)}">${weekLabelById(wid)}</th>`; }
       }
     }
     html += '</tr>';
@@ -568,7 +571,7 @@ function render(){
       } else {
         for(const wid of p.weeks){
           const v = Number(r.values[wid]||0);
-          html += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('positives','${r.id}','${wid}', this.value)"></td>`;
+          html += `<td class="${cw(wid)}"><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('positives','${r.id}','${wid}', this.value)"></td>`;
         }
       }
     }
@@ -608,9 +611,9 @@ function render(){
           const v = Number(r.values[wid]||0);
           if(r.isAdjustment){
             // L'Adjustment è guidato dalla riga EoP (back-solve): sola lettura.
-            row += `<td><input class="cell" type="number" value="${v}" disabled title="Set automatically from the EoP row"></td>`;
+            row += `<td class="${cw(wid)}"><input class="cell" type="number" value="${v}" disabled title="Set automatically from the EoP row"></td>`;
           } else {
-            row += `<td><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
+            row += `<td class="${cw(wid)}"><input class="cell" type="number" inputmode="decimal" value="${v}" onblur="editCell('negatives','${r.id}','${wid}', this.value)"></td>`;
           }
         }
       }
@@ -645,7 +648,7 @@ function render(){
       html += `<td>${fmt(tWeek2[firstWid].bop)}</td>`;
     } else {
       for(const wid of p.weeks){
-        html += `<td>${fmt(tWeek2[wid].bop)}</td>`;
+        html += `<td class="${cw(wid)}">${fmt(tWeek2[wid].bop)}</td>`;
       }
     }
   }
@@ -658,7 +661,7 @@ function render(){
       html += `<td>${fmt(sum)}</td>`;
     } else {
       for(const wid of p.weeks){
-        html += `<td>${fmt(tWeek2[wid].net)}</td>`;
+        html += `<td class="${cw(wid)}">${fmt(tWeek2[wid].net)}</td>`;
       }
     }
   }
@@ -679,9 +682,9 @@ function render(){
         const tdCls = (eop < thr2) ? 'danger-bg' : '';
         const inCls = (eop < thr2) ? 'danger' : '';
         if(hasAccs){
-          html += `<td class="${tdCls} ${inCls}" title="Sum of your accounts (edit the account rows below)">${fmt(eop)}</td>`;
+          html += `<td class="${tdCls} ${inCls}${cw(wid)}" title="Sum of your accounts (edit the account rows below)">${fmt(eop)}</td>`;
         } else {
-          html += `<td class="${tdCls}"><input class="cell eop-cell ${inCls}" type="number" inputmode="decimal" value="${eop}" onblur="editEop('${wid}', this.value)" title="Type the actual end-of-period cash; the Adjustment row is recomputed"></td>`;
+          html += `<td class="${tdCls}${cw(wid)}"><input class="cell eop-cell ${inCls}" type="number" inputmode="decimal" value="${eop}" onblur="editEop('${wid}', this.value)" title="Type the actual end-of-period cash; the Adjustment row is recomputed"></td>`;
         }
       }
     }
@@ -699,7 +702,7 @@ function render(){
         } else {
           for(const wid of p.weeks){
             const v = accBal(wid, a.id);
-            html += `<td><input class="cell" type="number" inputmode="decimal" placeholder="0" value="${v!=null ? v : ''}" onblur="setAccountBalance('${wid}','${a.id}', this.value)"></td>`;
+            html += `<td class="${cw(wid)}"><input class="cell" type="number" inputmode="decimal" placeholder="0" value="${v!=null ? v : ''}" onblur="setAccountBalance('${wid}','${a.id}', this.value)"></td>`;
           }
         }
       }
@@ -712,7 +715,7 @@ function render(){
     if(ui.collapsed[p.id]){
       const lastWid = p.weeks[p.weeks.length-1]; html += `<td>${fmt(tWeek2[lastWid].runSav)}</td>`;
     } else {
-      for(const wid of p.weeks){ html += `<td>${fmt(tWeek2[wid].runSav)}</td>`; }
+      for(const wid of p.weeks){ html += `<td class="${cw(wid)}">${fmt(tWeek2[wid].runSav)}</td>`; }
     }
   }
   html += '</tr>';
@@ -890,7 +893,16 @@ function setView(view){
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
   for(const v of VIEWS) document.body.classList.toggle('view-'+v, v===view);
 }
-function gotoView(view){ setView(view); window.scrollTo(0,0); }
+function gotoView(view){ setView(view); window.scrollTo(0,0); if(view==='full') setTimeout(scrollToCurrentWeek, 60); }
+// Posiziona la tabella mostrando dalla settimana PRECEDENTE alla corrente (scroll a ritroso libero).
+function scrollToCurrentWeek(){
+  const panel = document.getElementById('gridPanel'); if(!panel) return;
+  const cell = panel.querySelector('thead .cw'); if(!cell) return;
+  const sticky = panel.querySelector('thead th.sticky');
+  const stickyW = sticky ? sticky.offsetWidth : 0;
+  const delta = cell.getBoundingClientRect().left - panel.getBoundingClientRect().left;
+  panel.scrollLeft = Math.max(0, panel.scrollLeft + delta - stickyW - cell.offsetWidth); // lascia ~una colonna prima
+}
 document.getElementById('tablist').addEventListener('click', (e)=>{
   if(!(e.target instanceof HTMLElement)) return;
   const b = e.target.closest('.tab'); if(!b) return;
@@ -1161,6 +1173,30 @@ document.getElementById('menuBanks').addEventListener('click', e=>{ e.preventDef
   showInfo('Connect your banks', 'Automatic bank connections are coming soon (work in progress). For now, add your accounts manually in the ⚙️ Settings of the “Full cash-flow view” (or with the + on the table), then enter each balance.');
 });
 document.getElementById('manageBanksBtn').addEventListener('click', openBanks);
+
+// Cancellazione account (doppia conferma) — usa la Edge Function "account".
+async function deleteAccount(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) return;
+  toast('Deleting your account…');
+  try{
+    const res = await fetch(`${window.SUPABASE_URL}/functions/v1/account`, {
+      method:'POST',
+      headers:{ 'content-type':'application/json', Authorization:`Bearer ${session.access_token}` },
+      body: JSON.stringify({ action:'delete' }),
+    });
+    const r = await res.json().catch(()=>({ error:'bad_response' }));
+    if(r.deleted){ await sb.auth.signOut(); location.reload(); return; }
+    toast('Could not delete account: ' + (r.error||'error'));
+  }catch(e){ toast('Could not delete account: ' + e); }
+}
+document.getElementById('menuDeleteAccount').addEventListener('click', e=>{
+  e.preventDefault();
+  drawer.classList.remove('show');
+  askConfirm('Delete your account?', 'This permanently deletes your account and ALL your data (cash-flow, accounts, balances). It cannot be undone.', 'Continue', ()=>{
+    askConfirm('Are you absolutely sure?', 'Final confirmation: your account and all data will be permanently removed.', 'Delete account', deleteAccount);
+  });
+});
 document.getElementById('banksClose').addEventListener('click', closeBanks);
 document.getElementById('banksModalOverlay').addEventListener('click', closeBanks);
 document.getElementById('addAccountBtn').addEventListener('click', ()=>{ addAccount(newAccountName.value); newAccountName.value=''; });

@@ -99,6 +99,11 @@ inseribili una banca per riga sia in "Weekly data input" sia nella tabella (riga
 lettura + N righe per-conto). Gestione conti (manuali) + connessione banca nel modale
 "Banks & cash" (menu hamburger). Campo vuoto = saldo non inserito.
 
+## Cancellazione account
+Edge Function `account` ([supabase/functions/account/index.ts]) azione `delete`: verifica il JWT
+utente e cancella l'utente con la **service-role** (cascade su `cashflows`/`bank_connections`).
+Da deployare nel dashboard (come `bank`). UI: menu hamburger → "🗑️ Delete account" (doppia conferma).
+
 ## Backlog (da fare)
 1. **EoP effettivo** (deciso in Fase 0): riga EoP editabile → back-solve su Adjustment,
    senza toccare il data model. Unica feature funzionale ancora aperta.
