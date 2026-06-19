@@ -1,25 +1,48 @@
 // ===== Utilities =====
 const uid=()=>Math.random().toString(36).slice(2,10);
-const addDays=(d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x};
-const startOfWeek=(d)=>{const x=new Date(d); const w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x}; // Monday
+// Date "solo-giorno" robuste al fuso. PROBLEMA storico: new Date("YYYY-MM-DD") interpreta la
+// stringa come UTC, e iso() la ri-serializzava in UTC → sfasamento di ±1 giorno (le settimane
+// iniziavano di domenica). FIX: parsare le stringhe come MEZZANOTTE LOCALE e serializzare dai
+// componenti locali. Tutte le conversioni stringa→Data passano da D().
+const parseISO=s=>{ const p=String(s).split('-').map(Number); return new Date(p[0], (p[1]||1)-1, (p[2]||1)); };
+const D=x=> (x instanceof Date) ? new Date(x) : (typeof x==='string' ? parseISO(x) : new Date(x));
+const addDays=(d,n)=>{const x=D(d); x.setDate(x.getDate()+n); return x};
+const startOfWeek=(d)=>{const x=D(d); const w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x}; // Monday
 const endOfWeek=(d)=>{const s=startOfWeek(d); return addDays(s,6)}; // Sunday
-const iso=d=>{const x=new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10)};
-const nextMonday=(d)=>{const x=new Date(d);const w=x.getDay();const a=(8-(w||7))%7; x.setDate(x.getDate()+a); x.setHours(0,0,0,0); return x};
+const iso=d=>{const x=D(d); const y=x.getFullYear(); const m=String(x.getMonth()+1).padStart(2,'0'); const dd=String(x.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`;};
+const nextMonday=(d)=>{const x=D(d);const w=x.getDay();const a=(8-(w||7))%7; x.setDate(x.getDate()+a); x.setHours(0,0,0,0); return x};
 const fmt=(n)=>new Intl.NumberFormat(undefined,{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Number(n)||0);
 
 // ===== Model =====
 function makeWeeks(n=26, startDate=null){
-  const start = startDate? startOfWeek(new Date(startDate)) : nextMonday(new Date());
+  const start = startDate? startOfWeek(startDate) : nextMonday(new Date());
   return Array.from({length:n},(_,i)=>{ const s=addDays(start, i*7); return {id:uid(), start: iso(s), end: iso(addDays(s,6))} });
 }
 function weeksFromDates(startDateISO, endDateISO){
-  const s = startOfWeek(new Date(startDateISO));
-  const e = endOfWeek(new Date(endDateISO));
+  const s = startOfWeek(startDateISO);
+  const e = endOfWeek(endDateISO);
   const weeks=[];
   for(let cur=new Date(s); cur<=e; cur=addDays(cur,7)){
     weeks.push({id:uid(), start: iso(cur), end: iso(addDays(cur,6))});
   }
   return weeks;
+}
+// Migrazione: riallinea al LUNEDÌ le settimane salvate con start non-lunedì (vecchio bug di
+// fuso che le faceva iniziare di domenica). Gli id NON cambiano, quindi i valori restano
+// agganciati per id; lo sfasamento era uniforme → la spaziatura di 7 giorni è preservata.
+// No-op se tutte le settimane iniziano già di lunedì (es. dati puliti del preload).
+function normalizeWeeksToMonday(m){
+  if(!m || !Array.isArray(m.weeks)) return false;
+  let changed=false;
+  for(const w of m.weeks){
+    const dow=D(w.start).getDay();          // 0=Dom .. 6=Sab (affidabile grazie a parseISO)
+    if(dow===1) continue;                    // già lunedì
+    let delta=(1-dow); if(delta<-3) delta+=7; if(delta>3) delta-=7;  // al lunedì più vicino
+    const ns=addDays(w.start, delta);
+    const nstart=iso(ns), nend=iso(addDays(ns,6));
+    if(nstart!==w.start || nend!==w.end){ w.start=nstart; w.end=nend; changed=true; }
+  }
+  return changed;
 }
 function zero(weeks){ return Object.fromEntries(weeks.map(w=>[w.id,0])) }
 function demo(withDates=null){
@@ -53,7 +76,7 @@ function emptyModel(withDates=null){
   return {bop0:0,weeks,positives,negatives};
 }
 function isMonthlyHit(weekStartISO, anchorISO){
-  const w=new Date(weekStartISO), anchor=new Date(anchorISO);
+  const w=D(weekStartISO), anchor=D(anchorISO);
   for(let d=0; d<7; d++){ const cur=addDays(w,d); if(cur.getDate()===anchor.getDate()) return true }
   return false;
 }
@@ -86,16 +109,16 @@ function totalsByWeek(model){
 }
 
 // ===== Grouping =====
-function monthKey(d){ const x=new Date(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}` }
+function monthKey(d){ const x=D(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}` }
 function monthLabel(k){ const [y,m]=k.split('-'); const dt=new Date(Number(y), Number(m)-1, 1); return dt.toLocaleString(undefined,{month:'short', year:'2-digit'}) }
-function quarterKey(d){ const x=new Date(d); const q=Math.floor(x.getMonth()/3)+1; return `${x.getFullYear()}-Q${q}` }
-function yearKey(d){ const x=new Date(d); return `${x.getFullYear()}` }
+function quarterKey(d){ const x=D(d); const q=Math.floor(x.getMonth()/3)+1; return `${x.getFullYear()}-Q${q}` }
+function yearKey(d){ const x=D(d); return `${x.getFullYear()}` }
 
 function buildPeriods(model, gran){
   const map=new Map();
   if(gran==='WEEK'){
     model.weeks.forEach(w=>{
-      const id=w.id; map.set(id,{id, label:new Date(w.start).toLocaleDateString(undefined,{month:'short',day:'numeric'}), weeks:[w.id]});
+      const id=w.id; map.set(id,{id, label:D(w.start).toLocaleDateString(undefined,{month:'short',day:'numeric'}), weeks:[w.id]});
     });
   } else if(gran==='MONTH'){
     model.weeks.forEach(w=>{
@@ -159,7 +182,7 @@ function toast(text){
 function colSum(row, weekIds){ return weekIds.reduce((a,wid)=>a+Number(row.values[wid]||0),0) }
 function weekLabelById(wid){
   const w = model.weeks.find(x=>x.id===wid); if(!w) return wid;
-  const dt = new Date(w.start);
+  const dt = D(w.start);
   return dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});
 }
 function breaches(tWeek, thr){
@@ -333,9 +356,9 @@ function diCardRow(r, idx){
   // Settimane selezionabili: dalla corrente in poi; default ~4 settimane avanti.
   const future = model.weeks.slice(idx);
   const defK = Math.min(4, future.length-1);
-  const wkOpts = future.map((ww,k)=>`<option value="${ww.id}" ${k===defK?'selected':''}>${new Date(ww.start).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</option>`).join('');
+  const wkOpts = future.map((ww,k)=>`<option value="${ww.id}" ${k===defK?'selected':''}>${D(ww.start).toLocaleDateString(undefined,{day:'numeric',month:'short'})}</option>`).join('');
   const upcoming = future.filter(ww=>Number(r.values[ww.id]||0)!==0)
-    .map(ww=>`${fmt(r.values[ww.id])} on ${new Date(ww.start).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`);
+    .map(ww=>`${fmt(r.values[ww.id])} on ${D(ww.start).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`);
   const del = `<button class="iconbtn di-del" title="Remove this card" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`;
   return `<div class="di-card">
     <div class="di-card-head"><span class="di-name">${r.name}</span>${del}</div>
@@ -365,7 +388,7 @@ function renderDataInput(tWeek){
   const idx = model.weeks.findIndex(w=>w.id===diWeekId);
   const w = model.weeks[idx];
   const t = tWeek[w.id];
-  const dLabel = new Date(w.start).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const dLabel = D(w.start).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   // Solo voci NON ricorrenti: le ricorrenti si gestiscono nella vista cash-flow estesa.
   const inc = model.positives.filter(r=>!r.recur);
   const exp = model.negatives.filter(r=>!r.isAdjustment && !r.isCard && !r.recur);
@@ -978,7 +1001,7 @@ function updateGranSeg(){
 // Horizon buttons
 function addWeek(){
   const last=model.weeks[model.weeks.length-1];
-  const start=iso(addDays(new Date(last.end),1)); const end=iso(addDays(new Date(start),6));
+  const start=iso(addDays(last.end,1)); const end=iso(addDays(start,6));
   const w={id:uid(), start, end}; model.weeks.push(w);
   model.positives.forEach(r=>r.values[w.id]=0); model.negatives.forEach(r=>r.values[w.id]=0);
   materialize(model); save(model); render();
@@ -1021,7 +1044,7 @@ settingsToggle.addEventListener('click', ()=>{
 applyDatesBtn.addEventListener('click', ()=>{
   const s = startInput.value; const e = endInput.value;
   if(!s || !e){ toast('Pick both start and end dates.'); return; }
-  const sDate=new Date(s), eDate=new Date(e);
+  const sDate=D(s), eDate=D(e);
   if(eDate < sDate){ toast('End date must be after start date.'); return; }
   const newWeeks = weeksFromDates(s, e);
   // Conserva i dati GIÀ inseriti. Gli id settimana sono casuali e iso() può sfasare la data
@@ -1029,9 +1052,9 @@ applyDatesBtn.addEventListener('click', ()=>{
   // ogni nuova settimana alla vecchia con la data di inizio PIÙ VICINA (entro <4 giorni, cioè
   // meno di mezza settimana → nessuna ambiguità). Così cambiare l'orizzonte non azzera i dati.
   const TOL = 4*24*3600*1000;
-  const oldList = model.weeks.map(w=>({ id:w.id, t:new Date(w.start).getTime() }));
+  const oldList = model.weeks.map(w=>({ id:w.id, t:D(w.start).getTime() }));
   const oldIdFor = (startISO)=>{
-    const t = new Date(startISO).getTime();
+    const t = D(startISO).getTime();
     let best=null, bestd=TOL;
     for(const o of oldList){ const dd=Math.abs(o.t-t); if(dd<bestd){ bestd=dd; best=o.id; } }
     return best;
@@ -1368,8 +1391,10 @@ async function init(){
     return;
   }
   const isNewUser = !saved.model;
-  model = saved.model || demo(); materialize(model);
-  if(isNewUser) save(model);                         // salva i dati di esempio SOLO per un utente realmente nuovo
+  model = saved.model || demo();
+  const migrated = normalizeWeeksToMonday(model);    // corregge settimane sfasate (vecchio bug di fuso)
+  materialize(model);
+  if(isNewUser || migrated) save(model);             // salva i dati di esempio (utente nuovo) o la migrazione
 
   ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',seenHowto:false};
   if(!ui.gran) ui.gran='MONTH';
