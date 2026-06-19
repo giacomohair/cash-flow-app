@@ -184,7 +184,7 @@ function niceStep(range, targetTicks=4){
 function chartSVG(values, weekLabels, opts={}){
   const { lineColor='#FF385C', threshold=null } = opts;
   const n = values.length;
-  const W=640, H=220, padL=64, padR=14, padT=16, padB=26;
+  const W=640, H=236, padL=64, padR=14, padT=16, padB=42;
   const innerW=W-padL-padR, innerH=H-padT-padB;
   if(!n) return `<svg viewBox="0 0 ${W} ${H}"></svg>`;
   const hasThr = threshold!=null && isFinite(threshold);
@@ -201,7 +201,8 @@ function chartSVG(values, weekLabels, opts={}){
   const Y=v=> padT + innerH*(1-(v-lo)/(hi-lo));
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
   const zeroY = Y(0);
-  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">`;
+  const geo = JSON.stringify({W,H,padL,padR,padT,padB,innerW,innerH,n,lo,hi});
+  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" data-geo='${geo}' font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">`;
   // Banda di allerta (sotto la soglia)
   if(hasThr){
     const ty=Y(threshold);
@@ -230,11 +231,81 @@ function chartSVG(values, weekLabels, opts={}){
   if(hasThr){
     values.forEach((v,i)=>{ if(v<threshold) s += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" fill="#D93025"/>`; });
   }
-  // Etichette X (prima/ultima settimana)
-  s += `<text x="${padL}" y="${H-8}" text-anchor="start" font-size="10" fill="#6B7280">${esc(weekLabels[0]||'')}</text>`;
-  if(n>1) s += `<text x="${(padL+innerW)}" y="${H-8}" text-anchor="end" font-size="10" fill="#6B7280">${esc(weekLabels[n-1]||'')}</text>`;
+  // Asse X: una tacca per OGNI settimana; etichette di data sparse per non sovrapporsi.
+  const baseY = padT + innerH;
+  for(let i=0;i<n;i++){
+    const x = X(i);
+    s += `<line x1="${x.toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${x.toFixed(1)}" y2="${(baseY+4).toFixed(1)}" stroke="#C7CBD1" stroke-width="1"/>`;
+  }
+  const lblEvery = Math.max(1, Math.ceil(n/8));   // ~8 etichette al massimo
+  for(let i=0;i<n;i+=lblEvery){
+    const x = X(i); const anchor = i===0 ? 'start' : (i>=n-lblEvery ? 'middle' : 'middle');
+    s += `<text x="${x.toFixed(1)}" y="${(baseY+16).toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="#6B7280">${esc(weekLabels[i]||'')}</text>`;
+  }
+  if((n-1) % lblEvery !== 0){   // assicura l'ultima settimana etichettata
+    s += `<text x="${X(n-1).toFixed(1)}" y="${(baseY+16).toFixed(1)}" text-anchor="end" font-size="9" fill="#6B7280">${esc(weekLabels[n-1]||'')}</text>`;
+  }
+  // Guida verticale + punto evidenziato (mostrati su hover via JS)
+  s += `<line class="hoverline" x1="0" y1="${padT}" x2="0" y2="${baseY.toFixed(1)}" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 3" style="display:none" pointer-events="none"/>`;
+  s += `<circle class="hoverdot" r="4" fill="${lineColor}" stroke="#fff" stroke-width="1.5" style="display:none" pointer-events="none"/>`;
   s += `</svg>`;
   return s;
+}
+
+// Tooltip condiviso dei grafici (creato una volta, riposizionato su hover).
+function chartTip(){
+  let t = document.getElementById('chartTip');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'chartTip';
+    document.body.appendChild(t);
+  }
+  return t;
+}
+// Monta un grafico nel contenitore e collega l'hover: guida verticale + punto + tooltip
+// con la data della settimana e il livello di cassa. Geometria letta da data-geo (così la
+// mappatura mouse→settimana resta corretta anche con l'SVG scalato a larghezza piena).
+function mountChart(elId, values, labels, opts={}){
+  const el = document.getElementById(elId); if(!el) return;
+  el.innerHTML = chartSVG(values, labels, opts);
+  const svg = el.querySelector('svg'); if(!svg) return;
+  let G; try{ G = JSON.parse(svg.getAttribute('data-geo')||'null'); }catch{ G=null; }
+  if(!G || !G.n) return;
+  const line = svg.querySelector('.hoverline'), dot = svg.querySelector('.hoverdot');
+  const tip = chartTip();
+  const X = i => G.padL + (G.n<=1 ? G.innerW/2 : G.innerW*i/(G.n-1));
+  const Y = v => G.padT + G.innerH*(1-(v-G.lo)/(G.hi-G.lo));
+  function show(ev){
+    const pt = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+    const r = svg.getBoundingClientRect(); if(!r.width) return;
+    const sx = (pt.clientX - r.left)/r.width * G.W;             // px schermo -> coord viewBox
+    const span = G.n<=1 ? 1 : G.innerW/(G.n-1);
+    let i = Math.round((sx - G.padL)/span);
+    i = Math.max(0, Math.min(G.n-1, i));
+    const v = Number(values[i]||0);
+    const x = X(i), y = Y(v);
+    if(line){ line.setAttribute('x1', x.toFixed(1)); line.setAttribute('x2', x.toFixed(1)); line.style.display=''; }
+    if(dot){ dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1)); dot.style.display=''; }
+    tip.innerHTML = `<span class="ct-wk">${labels[i]||''}</span><span class="ct-val">${fmt(v)}</span>`;
+    tip.style.display = 'block';
+    tip.style.left = (pt.clientX + 14) + 'px';
+    tip.style.top  = (pt.clientY + 14) + 'px';
+  }
+  function hide(){ if(line) line.style.display='none'; if(dot) dot.style.display='none'; tip.style.display='none'; }
+  svg.addEventListener('mousemove', show);
+  svg.addEventListener('mouseleave', hide);
+  svg.addEventListener('touchstart', show, {passive:true});
+  svg.addEventListener('touchmove', show, {passive:true});
+  svg.addEventListener('touchend', hide);
+}
+// Ri-monta entrambi i grafici dall'ultima serie calcolata (usato anche all'ingresso in
+// Dashboard, così l'SVG è dimensionato quando il contenitore è visibile — fix "non vedo
+// gli andamenti dopo il refresh").
+let lastCharts = null;
+function mountCharts(){
+  if(!lastCharts) return;
+  mountChart('eopChart', lastCharts.eop, lastCharts.labels, {lineColor:'#0F172A', threshold:lastCharts.thr});
+  mountChart('savChart', lastCharts.sav, lastCharts.labels, {lineColor:'#0f766e'});
 }
 
 // ===== Data input (inserimento rapido settimana per settimana, mobile-friendly) =====
@@ -509,10 +580,8 @@ function render(){
   const wkLabels = model.weeks.map(w=>weekLabelById(w.id));
   const eopSeries = model.weeks.map(w=>tWeek[w.id].eop);
   const savSeries = model.weeks.map(w=>tWeek[w.id].runSav);
-  const eopChartEl = document.getElementById('eopChart');
-  const savChartEl = document.getElementById('savChart');
-  if(eopChartEl) eopChartEl.innerHTML = chartSVG(eopSeries, wkLabels, {lineColor:'#0F172A', threshold:thr});
-  if(savChartEl) savChartEl.innerHTML = chartSVG(savSeries, wkLabels, {lineColor:'#0f766e'});
+  lastCharts = { eop:eopSeries, sav:savSeries, labels:wkLabels, thr };
+  mountCharts();
 
   // Data input view (week-by-week)
   renderDataInput(tWeek);
@@ -921,7 +990,7 @@ function setView(view){
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
   for(const v of VIEWS) document.body.classList.toggle('view-'+v, v===view);
 }
-function gotoView(view){ setView(view); try{ sessionStorage.setItem('cf_view', view); }catch{} window.scrollTo(0,0); if(view==='full') setTimeout(scrollToCurrentWeek, 60); }
+function gotoView(view){ setView(view); try{ sessionStorage.setItem('cf_view', view); }catch{} window.scrollTo(0,0); if(view==='full') setTimeout(scrollToCurrentWeek, 60); if(view==='dashboard') setTimeout(mountCharts, 30); }
 // Posiziona la tabella mostrando dalla settimana PRECEDENTE alla corrente (scroll a ritroso libero).
 function scrollToCurrentWeek(){
   const panel = document.getElementById('gridPanel'); if(!panel) return;
