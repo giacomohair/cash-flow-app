@@ -1024,21 +1024,30 @@ applyDatesBtn.addEventListener('click', ()=>{
   const sDate=new Date(s), eDate=new Date(e);
   if(eDate < sDate){ toast('End date must be after start date.'); return; }
   const newWeeks = weeksFromDates(s, e);
-  // Conserva i dati GIÀ inseriti: gli id settimana sono casuali, quindi rimappiamo i valori
-  // per DATA di inizio settimana. Così cambiare l'orizzonte non azzera più i dati esistenti.
-  const oldByStart = {}; model.weeks.forEach(w=> oldByStart[w.start]=w.id);
+  // Conserva i dati GIÀ inseriti. Gli id settimana sono casuali e iso() può sfasare la data
+  // di ±1 giorno per fuso orario, quindi NON facciamo match esatto sulla stringa: associamo
+  // ogni nuova settimana alla vecchia con la data di inizio PIÙ VICINA (entro <4 giorni, cioè
+  // meno di mezza settimana → nessuna ambiguità). Così cambiare l'orizzonte non azzera i dati.
+  const TOL = 4*24*3600*1000;
+  const oldList = model.weeks.map(w=>({ id:w.id, t:new Date(w.start).getTime() }));
+  const oldIdFor = (startISO)=>{
+    const t = new Date(startISO).getTime();
+    let best=null, bestd=TOL;
+    for(const o of oldList){ const dd=Math.abs(o.t-t); if(dd<bestd){ bestd=dd; best=o.id; } }
+    return best;
+  };
   const remapRow=(row)=>{
     const nv = {};
     for(const w of newWeeks){
-      const oid = oldByStart[w.start];
+      const oid = oldIdFor(w.start);
       nv[w.id] = (oid!=null && row.values[oid]!=null) ? row.values[oid] : 0;
     }
     row.values = nv; return row;
   };
-  // Rimappa anche i saldi per-conto (model.balances) per data.
+  // Rimappa anche i saldi per-conto (model.balances) per data più vicina.
   if(model.balances){
     const nb = {};
-    for(const w of newWeeks){ const oid = oldByStart[w.start]; if(oid!=null && model.balances[oid]) nb[w.id] = model.balances[oid]; }
+    for(const w of newWeeks){ const oid = oldIdFor(w.start); if(oid!=null && model.balances[oid]) nb[w.id] = model.balances[oid]; }
     model.balances = nb;
   }
   model.weeks = newWeeks;
