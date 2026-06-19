@@ -4,3 +4,7 @@ node_modules
 .env
 .env.local
 .env.*.local
+
+# dati personali pre-caricamento (NON committare)
+preload_giac.sql
+Cash-flow*.xlsx
