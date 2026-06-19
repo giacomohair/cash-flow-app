@@ -636,7 +636,7 @@ function render(){
     const collapsed = !!ui.collapsed[p.id];
     const span = collapsed? 1 : p.weeks.length;
     if(togglable){
-      html += `<th colspan="${span}" class="period-th" onclick="togglePeriod('${p.id}')" title="${collapsed?'Tap to expand into weeks':'Tap to collapse'}"><span class="chev">${collapsed?'▸':'▾'}</span> ${p.label}</th>`;
+      html += `<th colspan="${span}" class="period-th" onclick="togglePeriod('${p.id}')" title="${collapsed?'Tap to expand into weeks':'Tap to collapse'}"><span class="chev">${collapsed?'▶':'▼'}</span> ${p.label}</th>`;
     } else {
       // A granularità WEEK ogni periodo è una settimana: evidenzia quella corrente.
       html += `<th colspan="${span}" class="${cw(p.weeks[0])}">${p.label}${p.weeks[0]===CUR?' (Current week)':''}</th>`;
@@ -665,7 +665,7 @@ function render(){
   // TBODY
   html += '<tbody>';
   const secInf = !!ui.secCollapsed.inflows;
-  html += `<tr class="section inflows sec-toggle" onclick="toggleSection('inflows')" title="Click to fold/unfold"><td class="sticky"><span class="chev">${secInf?'▸':'▾'}</span> Inflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
+  html += `<tr class="section inflows sec-toggle" onclick="toggleSection('inflows')" title="Click to fold/unfold"><td class="sticky"><span class="chev">${secInf?'▶':'▼'}</span> Inflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
   if(!secInf) for(const r of model.positives){
     html += `<tr class="inflow-row">`;
     const inCat = r.recur ? {c:'tag--recurring', t:'Recurring'} : {c:'tag--oneoff', t:'One-off'};
@@ -724,7 +724,7 @@ function render(){
   };
 
   const secOut = !!ui.secCollapsed.outflows;
-  html += `<tr class="section outflows sec-toggle" onclick="toggleSection('outflows')" title="Click to fold/unfold"><td class="sticky"><span class="chev">${secOut?'▸':'▾'}</span> Outflows</td>${emptyCells}</tr>`;
+  html += `<tr class="section outflows sec-toggle" onclick="toggleSection('outflows')" title="Click to fold/unfold"><td class="sticky"><span class="chev">${secOut?'▶':'▼'}</span> Outflows</td>${emptyCells}</tr>`;
   // Le carte restano Outflows (sfondo rossino + tag "Credit card"); un riquadro leggero
   // racchiude l'intero gruppo, senza intestazione.
   const cardList = model.negatives.filter(r=>r.isCard);
@@ -824,7 +824,13 @@ function render(){
 
   html += '</tbody>';
   gridEl.innerHTML = html;
-  setTimeout(sizeGridPanel, 0);   // mantiene l'header (date) agganciato: scroll verticale nel pannello
+  setTimeout(()=>{ syncHeaderOffset(); sizeGridPanel(); }, 0);  // header agganciato + scroll verticale nel pannello
+}
+// Aggancia la riga "settimane" SOTTO la riga "periodi" anche se quest'ultima cambia altezza
+// (es. badge chevron più grandi): misura l'altezza reale e la passa al CSS (--ph).
+function syncHeaderOffset(){
+  const pr = gridEl.querySelector('thead tr.periods');
+  if(pr) gridEl.style.setProperty('--ph', pr.offsetHeight + 'px');
 }
 
 // ===== Handlers =====
@@ -1056,7 +1062,7 @@ function sizeGridPanel(){
   const h = Math.max(260, window.innerHeight - top - 14);   // riempi fino in fondo (margine 14px)
   panel.style.maxHeight = h + 'px';
 }
-window.addEventListener('resize', sizeGridPanel);
+window.addEventListener('resize', ()=>{ syncHeaderOffset(); sizeGridPanel(); });
 document.getElementById('tablist').addEventListener('click', (e)=>{
   if(!(e.target instanceof HTMLElement)) return;
   const b = e.target.closest('.tab'); if(!b) return;

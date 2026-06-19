@@ -49,7 +49,17 @@ body:not(.view-full) #settingsToggle{display:none}
 /* Intestazione di periodo cliccabile (tap per espandere/comprimere) */
 thead th.period-th{cursor:pointer;user-select:none}
 thead th.period-th:hover{background:#e9ebef}
-.period-th .chev{display:inline-block;color:var(--accent);font-size:11px;margin-right:3px;vertical-align:middle}
+/* Chevron espandi/comprimi (righe sezioni + colonne periodi): badge ben visibile e tap-friendly */
+.period-th .chev,
+tbody tr.sec-toggle .chev{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:8px;
+  background:var(--accent);color:#fff;font-size:13px;font-weight:700;line-height:1;
+  margin-right:7px;vertical-align:middle;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+@media (max-width:720px){
+  .period-th .chev,
+  tbody tr.sec-toggle .chev{width:30px;height:30px;font-size:15px;margin-right:8px}
+}
 /* Vista Data input */
 #dataInput{display:none}
 body.view-datainput #dataInput{display:block}
@@ -99,7 +109,7 @@ button.ghost{background:transparent}
 table{border-collapse:separate;border-spacing:0;width:100%}
 thead th{position:sticky;top:0;z-index:1;background:var(--muted);border-bottom:1px solid var(--line);text-align:right;padding:8px 10px;white-space:nowrap}
 thead tr.periods th{top:0}
-thead tr.weeks th{top:32px}
+thead tr.weeks th{top:var(--ph,32px)}
 thead th.sticky{text-align:left;left:0;z-index:3;position:sticky}
 tbody td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
 /* La colonna etichette è sticky: deve avere SEMPRE sfondo opaco, altrimenti
@@ -107,7 +117,6 @@ tbody td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
 tbody td.sticky{position:sticky;left:0;background:var(--panel);z-index:2;text-align:left}
 tbody tr.section td.sticky{background:var(--muted);font-weight:700}
 tbody tr.sec-toggle{cursor:pointer;user-select:none}
-tbody tr.sec-toggle .chev{color:var(--accent);font-size:11px;margin-right:3px}
 tbody tr.inflow-row td.sticky{background:var(--lightgreen)}
 tbody tr.outflow-row td.sticky{background:var(--lightred)}
 tbody tr.adjustment-row td.sticky{background:var(--lightgray)}
