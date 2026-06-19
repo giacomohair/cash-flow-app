@@ -534,7 +534,7 @@ function render(){
       html += `<th colspan="${span}" class="period-th" onclick="togglePeriod('${p.id}')" title="${collapsed?'Tap to expand into weeks':'Tap to collapse'}"><span class="chev">${collapsed?'▸':'▾'}</span> ${p.label}</th>`;
     } else {
       // A granularità WEEK ogni periodo è una settimana: evidenzia quella corrente.
-      html += `<th colspan="${span}" class="${cw(p.weeks[0])}">${p.label}</th>`;
+      html += `<th colspan="${span}" class="${cw(p.weeks[0])}">${p.label}${p.weeks[0]===CUR?' (Current week)':''}</th>`;
     }
   }
   html += '</tr>';
@@ -550,7 +550,7 @@ function render(){
       if(ui.collapsed[p.id]){
         html += `<th></th>`;
       } else {
-        for(const wid of p.weeks){ html += `<th class="${cw(wid)}">${weekLabelById(wid)}</th>`; }
+        for(const wid of p.weeks){ html += `<th class="${cw(wid)}">${weekLabelById(wid)}${wid===CUR?' (Current week)':''}</th>`; }
       }
     }
     html += '</tr>';
@@ -893,7 +893,7 @@ function setView(view){
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
   for(const v of VIEWS) document.body.classList.toggle('view-'+v, v===view);
 }
-function gotoView(view){ setView(view); window.scrollTo(0,0); if(view==='full') setTimeout(scrollToCurrentWeek, 60); }
+function gotoView(view){ setView(view); try{ sessionStorage.setItem('cf_view', view); }catch{} window.scrollTo(0,0); if(view==='full') setTimeout(scrollToCurrentWeek, 60); }
 // Posiziona la tabella mostrando dalla settimana PRECEDENTE alla corrente (scroll a ritroso libero).
 function scrollToCurrentWeek(){
   const panel = document.getElementById('gridPanel'); if(!panel) return;
@@ -1186,7 +1186,7 @@ async function deleteAccount(){
       body: JSON.stringify({ action:'delete' }),
     });
     const r = await res.json().catch(()=>({ error:'bad_response' }));
-    if(r.deleted){ await sb.auth.signOut(); location.reload(); return; }
+    if(r.deleted){ try{ sessionStorage.removeItem('cf_view'); }catch{} await sb.auth.signOut(); location.reload(); return; }
     toast('Could not delete account: ' + (r.error||'error'));
   }catch(e){ toast('Could not delete account: ' + e); }
 }
@@ -1249,10 +1249,20 @@ async function init(){
   updateGranSeg();
   eopInput.value = ui.eopThreshold;
 
-  // Vista d'ingresso: la PRIMA volta "How to", poi sempre "Dashboard".
-  let landing = 'dashboard';
-  if(!ui.seenHowto){ landing = 'howto'; ui.seenHowto = true; savePrefs(); }
+  // Vista d'ingresso: su REFRESH (stessa scheda) resta dov'eri; al NUOVO ingresso vai in
+  // Dashboard (How to solo al primo accesso assoluto). cf_view sta in sessionStorage (per-tab),
+  // azzerato al logout.
+  const savedView = sessionStorage.getItem('cf_view');
+  let landing;
+  if(savedView && VIEWS.includes(savedView)){
+    landing = savedView;                                  // refresh
+  } else if(!ui.seenHowto){
+    landing = 'howto'; ui.seenHowto = true; savePrefs();  // primo accesso assoluto
+  } else {
+    landing = 'dashboard';                                // nuovo ingresso
+  }
   setView(landing);
+  sessionStorage.setItem('cf_view', landing);
 
   // Initial render
   render();

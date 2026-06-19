@@ -103,6 +103,7 @@ if(logoutBtn){
   logoutBtn.addEventListener('click', async (e)=>{
     e.preventDefault();
     await storage.flushNow();           // invia eventuali salvataggi in coda
+    try{ sessionStorage.removeItem('cf_view'); }catch{}  // nuovo login -> riparte da Dashboard
     await sb.auth.signOut();
     location.reload();                  // stato pulito: il prossimo utente ricarica dal cloud
   });
