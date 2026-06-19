@@ -990,6 +990,16 @@ document.getElementById('headerHelpBtn').addEventListener('click', openHowto);
 function togglePeriod(pid){ ui.collapsed[pid] = !ui.collapsed[pid]; savePrefs(); render() }
 // Comprime/espande un'intera sezione (Inflows / Outflows) per accorciare lo scroll.
 function toggleSection(key){ ui.secCollapsed = ui.secCollapsed || {}; ui.secCollapsed[key] = !ui.secCollapsed[key]; savePrefs(); render() }
+// Stato d'apertura della full view: vista per MESE, ma con il mese CORRENTE espanso a
+// settimane (celle editabili) e tutti gli altri mesi raggruppati (overview a totali).
+function defaultMonthGrouping(){
+  ui.gran = 'MONTH';
+  ui.collapsed = {};
+  const cur = currentWeekId();
+  const periods = buildPeriods(model, 'MONTH');
+  periods.forEach(p=>{ ui.collapsed[p.id] = !(cur && p.weeks.includes(cur)); }); // espandi solo il mese corrente
+  if(periods.length && !periods.some(p=> !ui.collapsed[p.id])) ui.collapsed[periods[0].id] = false; // fallback: primo mese
+}
 // Imposta il livello di zoom (segmented control). Default sensato dei periodi:
 // a livello settimana tutto espanso (celle editabili); a livelli superiori tutto
 // compresso (overview a totali), poi si espande col tap.
@@ -1436,6 +1446,9 @@ async function init(){
   if(!ui.collapsed) ui.collapsed={};
   if(!ui.secCollapsed) ui.secCollapsed={};
   if(typeof ui.eopThreshold!=='number') ui.eopThreshold=0;
+
+  // All'apertura: full view per mese con il mese corrente espanso a settimane (gli altri raggruppati).
+  defaultMonthGrouping();
 
   // Initialize inputs to current model horizon
   if(model.weeks.length){
