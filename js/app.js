@@ -75,20 +75,24 @@ function emptyModel(withDates=null){
   ];
   return {bop0:0,weeks,positives,negatives};
 }
-function isMonthlyHit(weekStartISO, anchorISO){
-  const w=D(weekStartISO), anchor=D(anchorISO);
-  for(let d=0; d<7; d++){ const cur=addDays(w,d); if(cur.getDate()===anchor.getDate()) return true }
+const daysInMonth=(d)=> new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+// Vero se la settimana (Lun..Dom) contiene il "giorno del mese" scelto. Per i mesi più corti
+// di quel giorno (es. il 31 a febbraio) si usa l'ultimo giorno del mese.
+function isMonthlyHit(weekStartISO, day){
+  const w=D(weekStartISO);
+  for(let i=0;i<7;i++){ const cur=addDays(w,i); const eff=Math.min(day, daysInMonth(cur)); if(cur.getDate()===eff) return true; }
   return false;
 }
 function materialize(model){
   if(!model.weeks.length) return;
-  const anchor=model.weeks[0].start;
+  const anchorDay = D(model.weeks[0].start).getDate();   // default per ricorrenze mensili senza "day"
   const apply=row=>{
     const r=row.recur; if(!r) return; const amt=Number(r.amount||0);
+    const mday = (r.day!=null && Number(r.day)>=1) ? Number(r.day) : anchorDay;
     model.weeks.forEach((w,i)=>{ const cur=row.values[w.id]; if(Number(cur)) return;
       if(r.kind==='WEEKLY') row.values[w.id]=amt;
       else if(r.kind==='BIWEEKLY') row.values[w.id]=(i%2===0?amt:0);
-      else if(r.kind==='MONTHLY') row.values[w.id]=isMonthlyHit(w.start,anchor)?amt:0;
+      else if(r.kind==='MONTHLY') row.values[w.id]=isMonthlyHit(w.start, mday)?amt:0;
       else if(r.kind==='CUSTOM'){ const n=Number(r.every||1); row.values[w.id]=(i%n===0?amt:0) }
     });
   };
@@ -151,6 +155,14 @@ let model, ui; // assegnati in init() dopo storage.load()
 
 // ===== DOM =====
 const gridEl=document.getElementById('grid');
+// Click su una cella della tabella: seleziona TUTTO il contenuto (così si sovrascrive subito,
+// senza finire tra i singoli caratteri). setTimeout(0) per battere il mouseup che deseleziona.
+if(gridEl) gridEl.addEventListener('focusin', e=>{
+  const t = e.target;
+  if(t && t.classList && t.classList.contains('cell') && !t.disabled){
+    setTimeout(()=>{ try{ t.select(); }catch{} }, 0);
+  }
+});
 const cardRunSav=document.getElementById('cardRunSav');
 const cardAlertCount=document.getElementById('cardAlertCount');
 const cardAlertChips=document.getElementById('cardAlertChips');
@@ -812,6 +824,7 @@ function render(){
 
   html += '</tbody>';
   gridEl.innerHTML = html;
+  setTimeout(sizeGridPanel, 0);   // mantiene l'header (date) agganciato: scroll verticale nel pannello
 }
 
 // ===== Handlers =====
@@ -1014,7 +1027,7 @@ function setView(view){
   for(const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.getAttribute('data-view')===view));
   for(const v of VIEWS) document.body.classList.toggle('view-'+v, v===view);
 }
-function gotoView(view){ setView(view); try{ sessionStorage.setItem('cf_view', view); }catch{} window.scrollTo(0,0); if(view==='full') setTimeout(scrollToCurrentWeek, 60); if(view==='dashboard') setTimeout(mountCharts, 30); }
+function gotoView(view){ setView(view); try{ sessionStorage.setItem('cf_view', view); }catch{} window.scrollTo(0,0); if(view==='full'){ setTimeout(sizeGridPanel, 0); setTimeout(scrollToCurrentWeek, 60); } if(view==='dashboard') setTimeout(mountCharts, 30); }
 // Posiziona la tabella mostrando dalla settimana PRECEDENTE alla corrente (scroll a ritroso libero).
 function scrollToCurrentWeek(){
   const panel = document.getElementById('gridPanel'); if(!panel) return;
@@ -1024,6 +1037,16 @@ function scrollToCurrentWeek(){
   const delta = cell.getBoundingClientRect().left - panel.getBoundingClientRect().left;
   panel.scrollLeft = Math.max(0, panel.scrollLeft + delta - stickyW - cell.offsetWidth); // lascia ~una colonna prima
 }
+// Limita l'altezza del pannello tabella all'area visibile: così lo scroll verticale avviene
+// DENTRO il pannello e l'header (riga delle date) resta agganciato in alto (position:sticky).
+function sizeGridPanel(){
+  const panel = document.getElementById('gridPanel'); if(!panel) return;
+  if(!document.body.classList.contains('view-full')){ panel.style.maxHeight=''; return; }
+  const top = panel.getBoundingClientRect().top;            // distanza dal bordo alto del viewport
+  const h = Math.max(260, window.innerHeight - top - 14);   // riempi fino in fondo (margine 14px)
+  panel.style.maxHeight = h + 'px';
+}
+window.addEventListener('resize', sizeGridPanel);
 document.getElementById('tablist').addEventListener('click', (e)=>{
   if(!(e.target instanceof HTMLElement)) return;
   const b = e.target.closest('.tab'); if(!b) return;
@@ -1126,6 +1149,8 @@ const itemAmount     = document.getElementById('itemAmount');
 const itemFreq       = document.getElementById('itemFreq');
 const everyField     = document.getElementById('everyField');
 const itemEvery      = document.getElementById('itemEvery');
+const dayField       = document.getElementById('dayField');
+const itemDay        = document.getElementById('itemDay');
 const recurHint      = document.getElementById('recurHint');
 const itemCardField  = document.getElementById('itemCardField');
 const itemCard       = document.getElementById('itemCard');
@@ -1134,11 +1159,16 @@ let modalCtx = null; // { mode:'add'|'recur', type, section?, rowId?, card? }
 
 function updateRecurUI(){
   recurFields.style.display = itemRecurring.checked ? '' : 'none';
-  everyField.style.display  = (itemRecurring.checked && itemFreq.value==='CUSTOM') ? '' : 'none';
+  const isMonthly = itemFreq.value==='MONTHLY';
+  everyField.style.display = (itemRecurring.checked && itemFreq.value==='CUSTOM') ? '' : 'none';
+  dayField.style.display   = (itemRecurring.checked && isMonthly) ? '' : 'none';   // "quando": giorno del mese
   if(itemRecurring.checked){
     const n = Math.max(1, Number(itemEvery.value||1));
-    const map = { WEEKLY:'every week', BIWEEKLY:'every 2 weeks', MONTHLY:'every month', CUSTOM:`every ${n} week${n===1?'':'s'}` };
-    recurHint.textContent = `It will be added automatically ${map[itemFreq.value]||''}.`;
+    const dd = Math.min(31, Math.max(1, Number(itemDay.value||1)));
+    const ord = (dd===1?'1st':dd===2?'2nd':dd===3?'3rd':dd===21?'21st':dd===22?'22nd':dd===23?'23rd':dd===31?'31st':dd+'th');
+    const map = { WEEKLY:'every week', BIWEEKLY:'every 2 weeks', MONTHLY:`every month, around the ${ord}`, CUSTOM:`every ${n} week${n===1?'':'s'}` };
+    recurHint.textContent = `It will be added automatically ${map[itemFreq.value]||''}.`
+      + (isMonthly ? ' (months shorter than that day use their last day).' : '');
   } else {
     recurHint.textContent = 'No recurrence: the item starts empty — enter the weekly amounts by hand.';
   }
@@ -1146,6 +1176,7 @@ function updateRecurUI(){
 itemRecurring.addEventListener('change', updateRecurUI);
 itemFreq.addEventListener('change', updateRecurUI);
 itemEvery.addEventListener('input', updateRecurUI);
+itemDay.addEventListener('input', updateRecurUI);
 
 function openItemModal(ctx){
   modalCtx = ctx;
@@ -1160,6 +1191,7 @@ function openItemModal(ctx){
     itemAmount.value = ctx.type==='INFLOW' ? '1000' : '50';
     itemFreq.value = 'WEEKLY';
     itemEvery.value = '4';
+    itemDay.value = '1';
   } else { // 'recur'
     const row = model[ctx.section].find(r=>r.id===ctx.rowId);
     itemModalTitle.textContent = `Recurrence — ${row?.name || ''}`;
@@ -1169,6 +1201,7 @@ function openItemModal(ctx){
     itemAmount.value = Math.abs(Number(row?.recur?.amount ?? (ctx.type==='INFLOW'?1000:50)));
     itemFreq.value = row?.recur?.kind || 'WEEKLY';
     itemEvery.value = row?.recur?.every || 4;
+    itemDay.value = row?.recur?.day || 1;
   }
   updateRecurUI();
   itemModal.classList.add('show');
@@ -1181,7 +1214,9 @@ function buildRecur(type){
   const every = kind==='CUSTOM' ? Math.max(1, Number(itemEvery.value||1)) : 1;
   let amount = Math.abs(Number(itemAmount.value||0));
   if(type==='OUTFLOW') amount = -amount; // uscite negative (coerente con editCell)
-  return { kind, every, amount };
+  const recur = { kind, every, amount };
+  if(kind==='MONTHLY') recur.day = Math.min(31, Math.max(1, Number(itemDay.value||1))); // "quando" nel mese
+  return recur;
 }
 
 function saveItemModal(){
