@@ -327,6 +327,22 @@
   </div>
 </div>
 
+<!-- Modale azioni riga (matitina): rinomina + ricorrenza + elimina -->
+<div class="modal" id="rowModal">
+  <div class="modal-overlay" id="rowOverlay"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rowTitle">
+    <h2 id="rowTitle">Edit row</h2>
+    <label class="field"><span>Name</span><input id="rowName" type="text"></label>
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="ghost" id="rowRecur" type="button">📅 Recurrence</button>
+      <button class="danger-btn" id="rowDelete" type="button">🗑️ Delete</button>
+      <span style="flex:1"></span>
+      <button class="ghost" id="rowCancel" type="button">Cancel</button>
+      <button class="primary" id="rowSave" type="button">Save name</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modale di conferma (es. cancellazione riga) -->
 <div class="modal" id="confirmModal">
   <div class="modal-overlay" id="confirmOverlay"></div>

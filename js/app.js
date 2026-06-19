@@ -559,11 +559,12 @@ function render(){
 
   // TBODY
   html += '<tbody>';
-  html += `<tr class="section inflows"><td class="sticky">Inflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
-  for(const r of model.positives){
+  const secInf = !!ui.secCollapsed.inflows;
+  html += `<tr class="section inflows sec-toggle" onclick="toggleSection('inflows')" title="Click to fold/unfold"><td class="sticky"><span class="chev">${secInf?'▸':'▾'}</span> Inflows</td>${periods.map(p=> ui.collapsed[p.id]? '<td></td>': p.weeks.map(_=>'<td></td>').join('') ).join('')}</tr>`;
+  if(!secInf) for(const r of model.positives){
     html += `<tr class="inflow-row">`;
     const inCat = r.recur ? {c:'tag--recurring', t:'Recurring'} : {c:'tag--oneoff', t:'One-off'};
-    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> <span class="tag ${inCat.c}">${inCat.t}</span> <button class="iconbtn" title="Recurrence" onclick="editRecurrence('positives','${r.id}')">📅</button> <button class="iconbtn" title="Delete" onclick="deleteRow('positives','${r.id}')">🗑️</button></div></td>`;
+    html += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> <span class="tag ${inCat.c}">${inCat.t}</span> <button class="iconbtn" title="Edit row" onclick="openRowMenu('positives','${r.id}')">✏️</button></div></td>`;
     for(const p of periods){
       if(ui.collapsed[p.id]){
         const agg = colSum(r, p.weeks);
@@ -593,13 +594,8 @@ function render(){
                 :            {c:'tag--oneoff', t:'One-off'};
       tagHTML += `<span class="tag ${cat.c}">${cat.t}</span> `;
     }
-    let btns = '';
-    if(!r.isAdjustment){
-      // Ricorrenza: disponibile anche per le righe locked (es. Savings); non per le carte.
-      if(!r.isCard) btns += `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> `;
-      // Cestino: solo per righe non locked.
-      if(!r.locked) btns += `<button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`;
-    }
+    // Un'unica matitina per riga: apre il menu (rinomina / ricorrenza / elimina), adattato ai flag.
+    let btns = r.isAdjustment ? '' : `<button class="iconbtn" title="Edit row" onclick="openRowMenu('negatives','${r.id}')">✏️</button>`;
     let row = `<tr class="${trClass}">`;
     row += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tagHTML}${btns}</div></td>`;
     for(const p of periods){
@@ -622,13 +618,14 @@ function render(){
     return row;
   };
 
-  html += `<tr class="section outflows"><td class="sticky">Outflows</td>${emptyCells}</tr>`;
+  const secOut = !!ui.secCollapsed.outflows;
+  html += `<tr class="section outflows sec-toggle" onclick="toggleSection('outflows')" title="Click to fold/unfold"><td class="sticky"><span class="chev">${secOut?'▸':'▾'}</span> Outflows</td>${emptyCells}</tr>`;
   // Le carte restano Outflows (sfondo rossino + tag "Credit card"); un riquadro leggero
   // racchiude l'intero gruppo, senza intestazione.
   const cardList = model.negatives.filter(r=>r.isCard);
   const firstCardId = cardList.length ? cardList[0].id : null;
   const lastCardId  = cardList.length ? cardList[cardList.length-1].id : null;
-  for(const r of model.negatives){
+  if(!secOut) for(const r of model.negatives){
     let extra = '';
     if(r.id===firstCardId) extra += ' card-row-first';
     if(r.id===lastCardId)  extra += ' card-row-last';
@@ -844,6 +841,35 @@ function closeConfirm(){ confirmModal.classList.remove('show'); confirmCb = null
 confirmOkBtn.addEventListener('click', ()=>{ const cb = confirmCb; closeConfirm(); if(cb) cb(); });
 document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
 document.getElementById('confirmOverlay').addEventListener('click', closeConfirm);
+
+// ===== Modale azioni riga (matitina): rinomina / ricorrenza / elimina =====
+const rowModal = document.getElementById('rowModal');
+const rowNameInput = document.getElementById('rowName');
+let rowCtx = null;
+function openRowMenu(section, rowId){
+  const row = model[section] && model[section].find(r=>r.id===rowId); if(!row) return;
+  rowCtx = { section, rowId };
+  document.getElementById('rowTitle').textContent = `Edit “${row.name}”`;
+  rowNameInput.value = row.name;
+  document.getElementById('rowRecur').style.display = row.isCard ? 'none' : '';   // carte: no ricorrenza
+  document.getElementById('rowDelete').style.display = row.locked ? 'none' : '';  // locked: no elimina
+  rowModal.classList.add('show');
+  setTimeout(()=> rowNameInput.focus(), 50);
+}
+function closeRowMenu(){ rowModal.classList.remove('show'); rowCtx = null; }
+function saveRowName(){
+  if(!rowCtx){ closeRowMenu(); return; }
+  const row = model[rowCtx.section].find(r=>r.id===rowCtx.rowId);
+  const n = rowNameInput.value.trim();
+  if(row && n){ row.name = n; save(model); render(); }
+  closeRowMenu();
+}
+document.getElementById('rowSave').addEventListener('click', saveRowName);
+document.getElementById('rowCancel').addEventListener('click', closeRowMenu);
+document.getElementById('rowOverlay').addEventListener('click', closeRowMenu);
+document.getElementById('rowRecur').addEventListener('click', ()=>{ const c=rowCtx; closeRowMenu(); if(c) editRecurrence(c.section, c.rowId); });
+document.getElementById('rowDelete').addEventListener('click', ()=>{ const c=rowCtx; closeRowMenu(); if(c) deleteRow(c.section, c.rowId); });
+rowNameInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRowName(); } });
 document.getElementById('menuPersonalArea').addEventListener('click', e=>{ e.preventDefault(); showInfo('Personal Area', 'Coming soon — profile, linked banks and more.'); });
 // How-to guide modal
 const howtoModal = document.getElementById('howtoModal');
@@ -856,6 +882,8 @@ document.getElementById('headerHelpBtn').addEventListener('click', openHowto);
 
 // Tap su un'intestazione di periodo: espande/comprime quel periodo
 function togglePeriod(pid){ ui.collapsed[pid] = !ui.collapsed[pid]; savePrefs(); render() }
+// Comprime/espande un'intera sezione (Inflows / Outflows) per accorciare lo scroll.
+function toggleSection(key){ ui.secCollapsed = ui.secCollapsed || {}; ui.secCollapsed[key] = !ui.secCollapsed[key]; savePrefs(); render() }
 // Imposta il livello di zoom (segmented control). Default sensato dei periodi:
 // a livello settimana tutto espanso (celle editabili); a livelli superiori tutto
 // compresso (overview a totali), poi si espande col tap.
@@ -1088,6 +1116,7 @@ document.addEventListener('keydown', e=>{
   if(confirmModal.classList.contains('show')) closeConfirm();
   if(bankModal.classList.contains('show')) closeBank();
   if(banksModal.classList.contains('show')) closeBanks();
+  if(rowModal.classList.contains('show')) closeRowMenu();
 });
 
 // ===== Integrazione bancaria (Edge Function "bank", TrueLayer) =====
@@ -1220,6 +1249,8 @@ window.openBanks = openBanks;
 window.openBankPicker = openBankPicker;
 window.currentWeekId = currentWeekId;
 window.togglePeriod = togglePeriod;
+window.toggleSection = toggleSection;
+window.openRowMenu = openRowMenu;
 window.syncBank = syncBank;
 window.connectBank = connectBank;
 window.gotoView = gotoView;
@@ -1239,6 +1270,7 @@ async function init(){
   ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',seenHowto:false};
   if(!ui.gran) ui.gran='MONTH';
   if(!ui.collapsed) ui.collapsed={};
+  if(!ui.secCollapsed) ui.secCollapsed={};
   if(typeof ui.eopThreshold!=='number') ui.eopThreshold=0;
 
   // Initialize inputs to current model horizon

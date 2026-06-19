@@ -101,6 +101,8 @@ tbody td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
    gli importi scrollano sotto e si confondono (visibile su mobile). */
 tbody td.sticky{position:sticky;left:0;background:var(--panel);z-index:2;text-align:left}
 tbody tr.section td.sticky{background:var(--muted);font-weight:700}
+tbody tr.sec-toggle{cursor:pointer;user-select:none}
+tbody tr.sec-toggle .chev{color:var(--accent);font-size:11px;margin-right:3px}
 tbody tr.inflow-row td.sticky{background:var(--lightgreen)}
 tbody tr.outflow-row td.sticky{background:var(--lightred)}
 tbody tr.adjustment-row td.sticky{background:var(--lightgray)}
