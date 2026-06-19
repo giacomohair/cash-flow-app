@@ -591,10 +591,11 @@ function render(){
       tagHTML += `<span class="tag ${cat.c}">${cat.t}</span> `;
     }
     let btns = '';
-    if(!r.isAdjustment && !r.locked){
-      // Le carte non sono ricorrenti: niente icona ricorrenza (calendario).
+    if(!r.isAdjustment){
+      // Ricorrenza: disponibile anche per le righe locked (es. Savings); non per le carte.
       if(!r.isCard) btns += `<button class="iconbtn" title="Recurrence" onclick="editRecurrence('negatives','${r.id}')">📅</button> `;
-      btns += `<button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`;
+      // Cestino: solo per righe non locked.
+      if(!r.locked) btns += `<button class="iconbtn" title="Delete" onclick="deleteRow('negatives','${r.id}')">🗑️</button>`;
     }
     let row = `<tr class="${trClass}">`;
     row += `<td class="sticky"><div class="rowname"><span class="name">${r.name}</span> ${tagHTML}${btns}</div></td>`;
@@ -727,7 +728,10 @@ function editCell(section,rowId,weekId,raw){
   let v = Number(raw||0);
   if(row.type==='OUTFLOW' && v>0) v = -v; // auto-negative for outflows
   row.values[weekId] = v;
-  materialize(model); save(model); render();
+  // NB: niente materialize qui — altrimenti una cella messa a 0 su una riga ricorrente
+  // verrebbe ri-riempita col valore della ricorrenza (impossibile azzerare una settimana).
+  // La ricorrenza si applica comunque su add voce / +settimana / modifica ricorrenza / init.
+  save(model); render();
 }
 // EoP effettivo: l'utente digita la cassa reale di fine settimana e si calcola a
 // ritroso la riga Adjustment (vedi decisione Fase 0). EOP resta calcolato (bop+net);
@@ -941,6 +945,20 @@ addOutflowBtn.addEventListener('click', ()=> openItemModal({mode:'add', type:'OU
 
 // Alerts actions
 eopInput.addEventListener('change', ()=>{ ui.eopThreshold = Number(eopInput.value||0); savePrefs(); render() });
+
+// Data: azzera tutto il tabellone (distruttivo, doppia conferma)
+function doClearAll(){
+  const s = model.weeks[0] && model.weeks[0].start;
+  const e = model.weeks.length && model.weeks[model.weeks.length-1].end;
+  model = (s && e) ? emptyModel({ start:s, end:e }) : emptyModel();  // mantiene l'orizzonte date
+  materialize(model); save(model); render();
+  toast('All data cleared.');
+}
+document.getElementById('clearAllBtn').addEventListener('click', ()=>{
+  askConfirm('Clear all data?', 'This removes every income, expense, credit card, account balance and amount. The date range is kept. This cannot be undone.', 'Continue', ()=>{
+    askConfirm('Are you absolutely sure?', 'Second and final confirmation: the whole table will be permanently cleared.', 'Clear all', doClearAll);
+  });
+});
 
 // ===== Modale "voce" (aggiunta / ricorrenza) =====
 const itemModal      = document.getElementById('itemModal');
