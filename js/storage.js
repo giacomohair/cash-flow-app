@@ -49,7 +49,7 @@ const storage = {
       .select('model, prefs')
       .eq('user_id', uid)
       .maybeSingle();
-    if(error){ console.error('Caricamento cloud fallito:', error.message); return { model: null, prefs: null }; }
+    if(error){ console.error('Caricamento cloud fallito:', error.message); return { model: null, prefs: null, error: error.message || 'load_failed' }; }
     return { model: data?.model ?? null, prefs: data?.prefs ?? null };
   },
 

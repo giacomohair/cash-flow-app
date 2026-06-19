@@ -237,13 +237,14 @@ function chartSVG(values, weekLabels, opts={}){
     const x = X(i);
     s += `<line x1="${x.toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${x.toFixed(1)}" y2="${(baseY+4).toFixed(1)}" stroke="#C7CBD1" stroke-width="1"/>`;
   }
-  const lblEvery = Math.max(1, Math.ceil(n/8));   // ~8 etichette al massimo
-  for(let i=0;i<n;i+=lblEvery){
-    const x = X(i); const anchor = i===0 ? 'start' : (i>=n-lblEvery ? 'middle' : 'middle');
+  // Etichette di data EQUIDISTANTI (includono sempre prima e ultima), in numero adatto allo
+  // spazio (~74px l'una nel sistema viewBox) per non sovrapporsi.
+  const maxLbl = n<=1 ? 1 : Math.max(2, Math.min(n, Math.floor(innerW/74)));
+  for(let k=0;k<maxLbl;k++){
+    const i = maxLbl===1 ? 0 : Math.round(k*(n-1)/(maxLbl-1));
+    const x = X(i);
+    const anchor = k===0 ? 'start' : (k===maxLbl-1 ? 'end' : 'middle');
     s += `<text x="${x.toFixed(1)}" y="${(baseY+16).toFixed(1)}" text-anchor="${anchor}" font-size="9" fill="#6B7280">${esc(weekLabels[i]||'')}</text>`;
-  }
-  if((n-1) % lblEvery !== 0){   // assicura l'ultima settimana etichettata
-    s += `<text x="${X(n-1).toFixed(1)}" y="${(baseY+16).toFixed(1)}" text-anchor="end" font-size="9" fill="#6B7280">${esc(weekLabels[n-1]||'')}</text>`;
   }
   // Guida verticale + punto evidenziato (mostrati su hover via JS)
   s += `<line class="hoverline" x1="0" y1="${padT}" x2="0" y2="${baseY.toFixed(1)}" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="3 3" style="display:none" pointer-events="none"/>`;
@@ -1023,16 +1024,29 @@ applyDatesBtn.addEventListener('click', ()=>{
   const sDate=new Date(s), eDate=new Date(e);
   if(eDate < sDate){ toast('End date must be after start date.'); return; }
   const newWeeks = weeksFromDates(s, e);
+  // Conserva i dati GIÀ inseriti: gli id settimana sono casuali, quindi rimappiamo i valori
+  // per DATA di inizio settimana. Così cambiare l'orizzonte non azzera più i dati esistenti.
+  const oldByStart = {}; model.weeks.forEach(w=> oldByStart[w.start]=w.id);
   const remapRow=(row)=>{
-    const newVals = Object.fromEntries(newWeeks.map(w=>[w.id,0]));
-    row.values = newVals; return row;
+    const nv = {};
+    for(const w of newWeeks){
+      const oid = oldByStart[w.start];
+      nv[w.id] = (oid!=null && row.values[oid]!=null) ? row.values[oid] : 0;
+    }
+    row.values = nv; return row;
   };
+  // Rimappa anche i saldi per-conto (model.balances) per data.
+  if(model.balances){
+    const nb = {};
+    for(const w of newWeeks){ const oid = oldByStart[w.start]; if(oid!=null && model.balances[oid]) nb[w.id] = model.balances[oid]; }
+    model.balances = nb;
+  }
   model.weeks = newWeeks;
   model.positives = model.positives.map(remapRow);
   model.negatives = model.negatives.map(remapRow);
   materialize(model); save(model);
   ui.collapsed={}; savePrefs();
-  toast('Horizon updated to custom dates.');
+  toast('Horizon updated — entered values kept where weeks overlap.');
   render();
 });
 
@@ -1333,8 +1347,20 @@ window.openItemModal = openItemModal;
 
 // ===== Bootstrap (async: carica da storage, poi inizializza UI e render) =====
 async function init(){
-  const saved = await storage.load();
-  model = saved.model || demo(); materialize(model); save(model);  // nuovi utenti: dati di esempio
+  let saved = await storage.load();
+  if(saved.error){                                   // errore transitorio (rete/token): un retry
+    await new Promise(r=>setTimeout(r, 800));
+    saved = await storage.load();
+  }
+  if(saved.error){
+    // CRITICO: non far partire l'app con dati demo, altrimenti il primo save
+    // sovrascriverebbe i dati reali nel cloud. Meglio fermarsi e avvisare.
+    alert('⚠️ Could not load your data (network or session issue). To protect your saved data, the app will NOT start with empty/demo data. Please check your connection and refresh the page.');
+    return;
+  }
+  const isNewUser = !saved.model;
+  model = saved.model || demo(); materialize(model);
+  if(isNewUser) save(model);                         // salva i dati di esempio SOLO per un utente realmente nuovo
 
   ui = saved.prefs || {gran:'MONTH',collapsed:{},eopThreshold:0,start:'',end:'',seenHowto:false};
   if(!ui.gran) ui.gran='MONTH';
